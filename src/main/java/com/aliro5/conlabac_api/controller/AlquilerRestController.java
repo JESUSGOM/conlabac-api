@@ -9,15 +9,18 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/alquileres")
+@RequestMapping("/api/destinos")
 public class AlquilerRestController {
 
     @Autowired
     private AlquilerService service;
 
-    @GetMapping("/centro/{idCentro}")
-    public List<Alquiler> listarPorCentro(@PathVariable Integer idCentro) {
-        return service.listarPorCentro(idCentro);
+    /**
+     * Endpoint para el combo del Frontend: GET http://localhost:8080/api/destinos?centroId=1
+     */
+    @GetMapping
+    public List<Alquiler> listarPorCentro(@RequestParam("centroId") Integer centroId) {
+        return service.listarPorCentro(centroId);
     }
 
     @PostMapping

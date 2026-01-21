@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Optional; // AÑADIR IMPORT
 
 @Service
 public class GarajeService {
@@ -15,23 +16,20 @@ public class GarajeService {
     @Autowired
     private GarajeRepository repo;
 
-    // 1. Listar todos los registros (Ordenados por fecha descendente)
     public List<Garaje> listarTodos() {
         return repo.findAllByOrderByFechaDesc();
     }
 
-    // 2. Guardar nuevo registro (Entrada de vehículo)
+    // NUEVO MÉTODO: Necesario para que el controlador compile
+    public Optional<Garaje> obtenerPorId(Integer id) {
+        return repo.findById(id);
+    }
+
     public Garaje guardar(Garaje g) {
-        // Obtenemos la fecha de hoy
         LocalDate hoy = LocalDate.now();
-
-        // Rellenamos el campo moderno (Date)
         g.setFecha(hoy);
-
-        // Rellenamos el campo antiguo (String YYYYMMDD) para compatibilidad
         g.setFechaTexto(hoy.format(DateTimeFormatter.ofPattern("yyyyMMdd")));
 
-        // Limpieza de datos: Matrícula en mayúsculas y sin espacios
         if (g.getMatricula() != null) {
             g.setMatricula(g.getMatricula().toUpperCase().replace(" ", ""));
         }
@@ -39,10 +37,8 @@ public class GarajeService {
         return repo.save(g);
     }
 
-    // 3. Mantenimiento Automático (Corrección de fechas históricas)
     public void ejecutarMantenimientoFechas() {
         try {
-            // Llama a la consulta nativa definida en el Repositorio
             repo.corregirFechas();
         } catch (Exception e) {
             e.printStackTrace();

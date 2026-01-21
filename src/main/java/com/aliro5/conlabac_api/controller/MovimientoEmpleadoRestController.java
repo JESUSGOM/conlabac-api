@@ -11,33 +11,41 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/contratas")
+@CrossOrigin(origins = "*") // Permite la conexión desde el navegador (puerto 8081)
 public class MovimientoEmpleadoRestController {
 
     @Autowired
     private MovimientoEmpleadoService service;
 
-    // GET: Ver quién está dentro
+    // GET: http://localhost:8080/api/contratas/activos?centroId=X
     @GetMapping("/activos")
-    public List<MovimientoEmpleado> listarActivos(@RequestParam("centroId") Integer centroId) {
-        return service.listarActivos(centroId);
+    public ResponseEntity<List<MovimientoEmpleado>> listarActivos(@RequestParam("centroId") Integer centroId) {
+        System.out.println("API: Consultando contratas activas para centro: " + centroId);
+        List<MovimientoEmpleado> lista = service.listarActivos(centroId);
+        return ResponseEntity.ok(lista != null ? lista : List.of());
     }
 
-    // POST: Fichar Entrada
-    // Espera JSON: { "nif": "1234X", "cif": "B123", "centroId": 1 }
+    // POST: http://localhost:8080/api/contratas/entrada
     @PostMapping("/entrada")
-    public MovimientoEmpleado entrada(@RequestBody Map<String, Object> datos) {
-        String nif = (String) datos.get("nif");
-        String cif = (String) datos.get("cif");
-        // Aseguramos conversión segura a Integer
-        Integer centroId = Integer.valueOf(datos.get("centroId").toString());
-
-        return service.registrarEntrada(nif, cif, centroId);
+    public ResponseEntity<MovimientoEmpleado> entrada(@RequestBody Map<String, Object> datos) {
+        try {
+            String nif = (String) datos.get("nif");
+            String cif = (String) datos.get("cif");
+            Integer centroId = Integer.valueOf(datos.get("centroId").toString());
+            return ResponseEntity.ok(service.registrarEntrada(nif, cif, centroId));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
     }
 
-    // PUT: Fichar Salida (por ID de movimiento)
+    // PUT: http://localhost:8080/api/contratas/salida/{id}
     @PutMapping("/salida/{id}")
     public ResponseEntity<Void> salida(@PathVariable Integer id) {
-        service.registrarSalidaPorId(id);
-        return ResponseEntity.ok().build();
+        try {
+            service.registrarSalidaPorId(id);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
     }
 }

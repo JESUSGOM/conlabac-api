@@ -41,16 +41,20 @@ class AperturaExtraRestControllerTest {
 
         mockMvc.perform(post("/api/aperturas-extra")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(nueva)))
+                        .content(objectMapper.writeValueAsString(nueva))
+                        .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.motivo").value("Acceso extraordinario"));
     }
 
     @Test
-    @DisplayName("GET /api/aperturas-extra/centro/1: Debe retornar lista")
+    @DisplayName("GET /api/aperturas-extra?centroId=1: Debe retornar lista")
     void listarAperturasOk() throws Exception {
-        mockMvc.perform(get("/api/aperturas-extra/centro/1")
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk());
+        // CORRECCIÓN: Se usa .param("centroId", "1") para coincidir con el controlador
+        mockMvc.perform(get("/api/aperturas-extra")
+                        .param("centroId", "1")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
     }
 }

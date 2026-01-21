@@ -24,27 +24,25 @@ public class PaqueteService {
         return repo.findByIdCentroOrderByFechaHoraRecepcionDesc(idCentro);
     }
 
+    // NUEVO: Método para buscar por ID usado en tests
+    public Optional<Paquete> obtenerPorId(Integer id) {
+        return repo.findById(id);
+    }
+
     public Paquete recibirPaquete(Paquete pkt) {
         LocalDateTime ahora = LocalDateTime.now();
-
-        // Rellenar fechas automáticas
         pkt.setFechaHoraRecepcion(ahora);
         pkt.setFecha(ahora.format(DateTimeFormatter.ofPattern("yyyyMMdd")));
         pkt.setHora(ahora.format(DateTimeFormatter.ofPattern("HHmmss")));
-
-        // Por defecto entra como NO comunicado (Pendiente)
         pkt.setComunicado("NO");
-
         return repo.save(pkt);
     }
 
     public void marcarComoEntregado(Integer id) {
-        Optional<Paquete> opcional = repo.findById(id);
-        if (opcional.isPresent()) {
-            Paquete pkt = opcional.get();
-            pkt.setComunicado("SI"); // Lo marcamos como gestionado
+        repo.findById(id).ifPresent(pkt -> {
+            pkt.setComunicado("SI");
             repo.save(pkt);
-        }
+        });
     }
 
     public void ejecutarMantenimientoFechas() {

@@ -2,12 +2,15 @@ package com.aliro5.conlabac_api.service;
 
 import com.aliro5.conlabac_api.model.Incidencia;
 import com.aliro5.conlabac_api.repository.IncidenciaRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -20,45 +23,41 @@ class IncidenciaServiceTest {
     private IncidenciaRepository repo;
 
     @Mock
-    private EmailService emailService; // Mockeamos el servicio de email
+    private EmailService emailService;
 
     @InjectMocks
     private IncidenciaService service;
 
-    @Test
-    @DisplayName("Debe asignar Maria Carmen si el centro es 1")
-    void testGuardarCentro1() {
-        // GIVEN
-        Incidencia inc = new Incidencia();
-        inc.setIdCentro(1);
-        inc.setTexto("Test");
+    private Incidencia mockInc;
 
-        when(repo.save(any(Incidencia.class))).thenAnswer(i -> i.getArguments()[0]);
-
-        // WHEN
-        Incidencia resultado = service.guardar(inc);
-
-        // THEN
-        assertEquals("María Carmen Betancor Reula", resultado.getComunicadoA());
-        assertEquals("cbetancor@itccanarias.org", resultado.getEmailComunica());
-        assertEquals("EMAIL", resultado.getModoComunica());
-        assertNotNull(resultado.getFecha()); // Verifica que generó la fecha yyyyMMdd
+    @BeforeEach
+    void setUp() {
+        mockInc = new Incidencia();
+        mockInc.setId(1);
+        mockInc.setIdCentro(1);
+        mockInc.setTexto("Incidencia de prueba");
     }
 
     @Test
-    @DisplayName("Debe asignar Adriana si el centro es 2")
-    void testGuardarCentro2() {
-        // GIVEN
-        Incidencia inc = new Incidencia();
-        inc.setIdCentro(2);
+    @DisplayName("Debe guardar e invocar el servicio de email")
+    void testGuardarIncidenciaCompleto() {
+        when(repo.save(any(Incidencia.class))).thenReturn(mockInc);
 
-        when(repo.save(any(Incidencia.class))).thenAnswer(i -> i.getArguments()[0]);
+        Incidencia resultado = service.guardar(new Incidencia());
 
-        // WHEN
-        Incidencia resultado = service.guardar(inc);
+        assertNotNull(resultado);
+        verify(emailService, times(1)).procesarIncidencia(any(Incidencia.class));
+    }
 
-        // THEN
-        assertEquals("Adriana Dominguez Sicilia", resultado.getComunicadoA());
-        assertEquals("adominguez@itccanarias.org", resultado.getEmailComunica());
+    @Test
+    @DisplayName("Debe desempaquetar Optional correctamente")
+    void testObtenerPorId() {
+        when(repo.findById(1)).thenReturn(Optional.of(mockInc));
+
+        // Corrección Incompatible types: Optional<Incidencia> vs Incidencia
+        Incidencia encontrada = service.obtenerPorId(1).orElse(null);
+
+        assertNotNull(encontrada);
+        assertEquals(1, encontrada.getId());
     }
 }

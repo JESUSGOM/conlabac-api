@@ -22,7 +22,7 @@ public class ContactoRestController {
 
     @GetMapping("/{id}")
     public ResponseEntity<Contacto> obtener(@PathVariable Integer id) {
-        return service.obtener(id)
+        return service.obtenerPorId(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }

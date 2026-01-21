@@ -12,6 +12,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/proveedores")
+@CrossOrigin(origins = "*") // Permite la comunicación entre puertos 8081 y 8080
 public class ProveedorRestController {
 
     @Autowired
@@ -20,50 +21,56 @@ public class ProveedorRestController {
     @Autowired
     private EmpleadoProveedorRepository empleadoRepo;
 
-    // 1. Listar Proveedores
+    // 1. Listar Proveedores por Centro
     @GetMapping
-    public List<Proveedor> listar(@RequestParam("centroId") Integer centroId) {
-        return service.listarProveedores(centroId);
+    public ResponseEntity<List<Proveedor>> listar(@RequestParam("centroId") Integer centroId) {
+        System.out.println("API: Listando proveedores para centro: " + centroId);
+        List<Proveedor> lista = service.listarPorCentro(centroId);
+        return ResponseEntity.ok(lista != null ? lista : List.of());
     }
 
-    // 2. Obtener un Proveedor (y sus empleados opcionalmente, pero haremos endpoints separados)
+    // 2. Obtener un Proveedor (Cif + CentroId)
     @GetMapping("/{cif}")
     public ResponseEntity<Proveedor> obtener(@PathVariable String cif, @RequestParam("centroId") Integer centroId) {
-        return service.obtenerProveedor(cif, centroId)
+        return service.obtenerPorId(cif, centroId)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     // 3. Guardar Proveedor
     @PostMapping
-    public Proveedor guardar(@RequestBody Proveedor proveedor) {
-        return service.guardarProveedor(proveedor);
+    public ResponseEntity<Proveedor> guardar(@RequestBody Proveedor proveedor) {
+        return ResponseEntity.ok(service.guardar(proveedor));
     }
 
-    // --- SUB-RECURSO: EMPLEADOS ---
-
-    // 4. Listar empleados de un proveedor
+    // 4. Listar empleados de un proveedor específico
     @GetMapping("/{cif}/empleados")
-    public List<EmpleadoProveedor> listarEmpleados(@PathVariable String cif, @RequestParam("centroId") Integer centroId) {
-        return service.listarEmpleados(cif, centroId);
+    public ResponseEntity<List<EmpleadoProveedor>> listarEmpleados(@PathVariable String cif, @RequestParam("centroId") Integer centroId) {
+        List<EmpleadoProveedor> lista = service.listarEmpleados(cif, centroId);
+        return ResponseEntity.ok(lista != null ? lista : List.of());
     }
 
-    // 5. Guardar Empleado
+    // 5. Guardar Empleado de Proveedor
     @PostMapping("/empleados")
-    public EmpleadoProveedor guardarEmpleado(@RequestBody EmpleadoProveedor empleado) {
-        return service.guardarEmpleado(empleado);
+    public ResponseEntity<EmpleadoProveedor> guardarEmpleado(@RequestBody EmpleadoProveedor empleado) {
+        return ResponseEntity.ok(service.guardarEmpleado(empleado));
     }
 
     // 6. Eliminar Empleado
     @DeleteMapping("/empleados/{id}")
     public ResponseEntity<Void> eliminarEmpleado(@PathVariable Integer id) {
-        service.eliminarEmpleado(id);
-        return ResponseEntity.ok().build();
+        try {
+            service.eliminarEmpleado(id);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
-    // 7. Listar TODOS los empleados de un centro (Global)
+    // 7. Listar TODOS los empleados de un centro
     @GetMapping("/empleados/todos")
-    public List<EmpleadoProveedor> listarTodosEmpleados(@RequestParam("centroId") Integer centroId) {
-        return empleadoRepo.findByIdCentro(centroId);
+    public ResponseEntity<List<EmpleadoProveedor>> listarTodosEmpleados(@RequestParam("centroId") Integer centroId) {
+        List<EmpleadoProveedor> lista = empleadoRepo.findByIdCentro(centroId);
+        return ResponseEntity.ok(lista != null ? lista : List.of());
     }
 }

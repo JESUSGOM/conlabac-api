@@ -15,25 +15,29 @@ public class LlaveRestController {
     @Autowired
     private LlaveService llaveService;
 
-    // Obtener todas las llaves de un centro
+    /**
+     * Inventario completo por centro
+     * GET /api/llaves?centroId=1
+     */
     @GetMapping
     public List<Llave> listarPorCentro(@RequestParam("centroId") Integer centroId) {
         return llaveService.listarPorCentro(centroId);
     }
 
-    // Nuevo: Endpoint para ver qué llaves hay físicamente en el cajetín (no prestadas)
+    /**
+     * Llaves en el tablero listas para entregar
+     * GET /api/llaves/disponibles?centroId=1
+     */
     @GetMapping("/disponibles")
     public List<Llave> listarDisponibles(@RequestParam("centroId") Integer centroId) {
         return llaveService.listarDisponibles(centroId);
     }
 
-    // Nuevo: Guardar o actualizar llave
     @PostMapping
     public Llave guardar(@RequestBody Llave llave) {
         return llaveService.guardar(llave);
     }
 
-    // Nuevo: Eliminar llave
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminar(@PathVariable Integer id) {
         llaveService.eliminar(id);

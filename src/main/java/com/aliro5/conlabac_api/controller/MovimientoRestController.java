@@ -9,37 +9,52 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/movimientos")
+@RequestMapping("/api") // Ruta base simplificada para coincidir con el Frontend
+@CrossOrigin(origins = "*")
 public class MovimientoRestController {
 
     @Autowired
     private MovimientoService servicio;
 
-    @GetMapping
-    public List<Movimiento> listar() {
-        return servicio.listarTodos();
+    // Ruta: GET http://localhost:8080/api/movimientos
+    @GetMapping("/movimientos")
+    public ResponseEntity<List<Movimiento>> listar() {
+        return ResponseEntity.ok(servicio.listarTodos());
     }
 
-    @PostMapping
-    public Movimiento guardar(@RequestBody Movimiento movimiento) {
-        return servicio.guardar(movimiento);
+    // Ruta: POST http://localhost:8080/api/movimientos
+    @PostMapping("/movimientos")
+    public ResponseEntity<Movimiento> guardar(@RequestBody Movimiento movimiento) {
+        return ResponseEntity.ok(servicio.guardar(movimiento));
     }
 
-    @GetMapping("/{id}")
-    public Movimiento obtener(@PathVariable Integer id) {
-        return servicio.obtenerPorId(id).orElse(null);
+    // Ruta: GET http://localhost:8080/api/movimientos/{id}
+    @GetMapping("/movimientos/{id}")
+    public ResponseEntity<Movimiento> obtener(@PathVariable Integer id) {
+        return servicio.obtenerPorId(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
-    // GET /api/movimientos/activos?centro=1
+    /**
+     * CRÍTICO: Esta es la ruta que tu Web está buscando.
+     * URL: http://localhost:8080/api/activos?centro=X
+     */
     @GetMapping("/activos")
-    public List<Movimiento> listarActivosHoy(@RequestParam("centro") Integer idCentro) {
-        return servicio.listarActivosHoyPorCentro(idCentro);
+    public ResponseEntity<List<Movimiento>> listarActivosHoy(@RequestParam("centro") Integer idCentro) {
+        System.out.println("API: Buscando visitantes activos para centro: " + idCentro);
+        List<Movimiento> activos = servicio.listarActivosHoyPorCentro(idCentro);
+        return ResponseEntity.ok(activos != null ? activos : List.of());
     }
 
-    // PUT /api/movimientos/{id}/salida
-    @PutMapping("/{id}/salida")
+    // Ruta: PUT http://localhost:8080/api/movimientos/{id}/salida
+    @PutMapping("/movimientos/{id}/salida")
     public ResponseEntity<Void> registrarSalida(@PathVariable Integer id) {
-        servicio.registrarSalida(id);
-        return ResponseEntity.ok().build();
+        try {
+            servicio.registrarSalida(id);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
     }
 }

@@ -14,9 +14,8 @@ public class Alquiler {
     private Integer idCentro;
 
     @Column(name = "AlqEmpresa", length = 60)
-    private String empresa; // Este será el "Destino"
+    private String empresa;
 
-    // Getters y Setters
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
     public Integer getIdCentro() { return idCentro; }

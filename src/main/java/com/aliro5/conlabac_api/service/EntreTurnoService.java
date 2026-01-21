@@ -31,11 +31,9 @@ public class EntreTurnoService {
         return lista;
     }
 
-    // --- MÉTODO OPTIMIZADO PARA TRADUCIR TODOS LOS DNI (Escritores y Lectores) ---
     private void rellenarNombres(List<EntreTurno> lista) {
         if (lista == null || lista.isEmpty()) return;
 
-        // 1. Recolectamos DNIs tanto de escritores como de lectores
         Set<String> dnis = lista.stream()
                 .flatMap(t -> Stream.of(t.getOperarioEscritor(), t.getUsuarioLector()))
                 .filter(dni -> dni != null && !dni.isEmpty())
@@ -43,19 +41,15 @@ public class EntreTurnoService {
 
         if (dnis.isEmpty()) return;
 
-        // 2. Consulta masiva
         List<Usuario> usuariosEncontrados = usuarioRepo.findAllById(dnis);
 
-        // 3. Mapa DNI -> Nombre
         Map<String, String> mapaNombres = usuariosEncontrados.stream()
                 .collect(Collectors.toMap(
                         Usuario::getDni,
                         u -> u.getNombre() + " " + (u.getApellido1() != null ? u.getApellido1() : "")
                 ));
 
-        // 4. Asignar nombres
         for (EntreTurno turno : lista) {
-            // Lector
             String dniLector = turno.getUsuarioLector();
             if (dniLector != null && mapaNombres.containsKey(dniLector)) {
                 turno.setNombreCompletoMostrar(mapaNombres.get(dniLector).trim());
@@ -63,7 +57,6 @@ public class EntreTurnoService {
                 turno.setNombreCompletoMostrar(dniLector);
             }
 
-            // Escritor
             String dniEscritor = turno.getOperarioEscritor();
             if (dniEscritor != null && mapaNombres.containsKey(dniEscritor)) {
                 turno.setNombreEscritorMostrar(mapaNombres.get(dniEscritor).trim());
@@ -73,7 +66,7 @@ public class EntreTurnoService {
         }
     }
 
-    // CREAR
+    // MÉTODO CREAR ORIGINAL
     public EntreTurno crear(EntreTurno nota) {
         LocalDateTime ahora = LocalDateTime.now();
         nota.setFechaHoraEscrito(ahora);
@@ -83,10 +76,14 @@ public class EntreTurnoService {
         nota.setFechaLeido(null);
         nota.setHoraLeido(null);
         nota.setUsuarioLector(null);
-        // Limpiar transients
         nota.setNombreCompletoMostrar(null);
         nota.setNombreEscritorMostrar(null);
         return repo.save(nota);
+    }
+
+    // CORRECCIÓN: Alias para que el controlador compile
+    public EntreTurno guardar(EntreTurno nota) {
+        return this.crear(nota);
     }
 
     // MARCAR LEÍDO

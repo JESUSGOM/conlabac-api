@@ -1,38 +1,53 @@
 package com.aliro5.conlabac_api.controller;
 
+import com.aliro5.conlabac_api.model.Alquiler;
 import com.aliro5.conlabac_api.service.AlquilerService;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.util.Collections;
-
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
-@WebMvcTest(AlquilerRestController.class) // Solo carga la capa web
+@SpringBootTest
+@ActiveProfiles("test")
+@AutoConfigureMockMvc
 public class AlquilerRestControllerTest {
 
     @Autowired
-    private MockMvc mockMvc; // Simula peticiones HTTP
+    private MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @MockBean
-    private AlquilerService service; // Simula el servicio para no tocar la DB real
+    private AlquilerService service;
 
     @Test
-    void testListarPorCentroDebeRetornarOk() throws Exception {
-        // Configuramos el comportamiento esperado del servicio
-        when(service.listarPorCentro(1)).thenReturn(Collections.emptyList());
+    @DisplayName("Debe registrar un alquiler correctamente")
+    void testRegistrarAlquiler() throws Exception {
+        Alquiler alquiler = new Alquiler();
+        alquiler.setIdCentro(1);
 
-        // Ejecutamos la petición GET y verificamos el status 200 OK
-        mockMvc.perform(get("/api/alquileres/centro/1")
-                        .contentType(MediaType.APPLICATION_BITSTREAM))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray());
+        // CORRECCIÓN: Se cambia 'setNombreArrendatario' por 'setEmpresa'
+        // para coincidir con la entidad y la BD (AlqEmpresa)
+        alquiler.setEmpresa("Test Empresa S.L.");
+
+        when(service.guardar(any(Alquiler.class))).thenReturn(alquiler);
+
+        mockMvc.perform(post("/api/alquileres")
+                        // CORRECCIÓN: Se usa APPLICATION_JSON para enviar el objeto serializado
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(alquiler)))
+                .andExpect(status().isOk());
     }
 }

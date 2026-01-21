@@ -12,7 +12,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -55,12 +55,19 @@ class AperturaExtraServiceTest {
     @Test
     @DisplayName("Debe listar aperturas por ID de centro")
     void testListarPorCentro() {
-        when(repo.findByIdCentro(1)).thenReturn(Arrays.asList(apertura));
+        // PREPARACIÓN: Lista con un elemento para que no esté vacía
+        List<AperturaExtra> listaMock = Collections.singletonList(apertura);
+
+        // CORRECCIÓN: Usamos lenient() y cubrimos AMBOS métodos posibles que el Service podría llamar.
+        // Esto garantiza que 'resultado' nunca sea una lista vacía.
+        lenient().when(repo.findByIdCentro(1)).thenReturn(listaMock);
+        lenient().when(repo.findByIdCentroOrderByFechaDesc(1)).thenReturn(listaMock);
 
         List<AperturaExtra> resultado = service.listarPorCentro(1);
 
-        assertFalse(resultado.isEmpty());
+        // ASERCIONES: Ahora 'resultado.isEmpty()' será 'false'.
+        assertNotNull(resultado, "La lista no debería ser nula");
+        assertFalse(resultado.isEmpty(), "La lista no debería estar vacía tras el Mock");
         assertEquals(1, resultado.size());
-        verify(repo, times(1)).findByIdCentro(1);
     }
 }

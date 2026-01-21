@@ -21,46 +21,55 @@ public class EmailService {
     private EnvioEmailRepository envioEmailRepo;
 
     /**
-     * @Async hace que este método se ejecute en un hilo separado.
-     * El usuario recibe la confirmación de la incidencia sin esperar al SMTP.
+     * @Async ejecuta el envío en segundo plano.
+     * Ahora tanto el usuario como la contraseña se definen por centro.
      */
     @Async
     public void procesarIncidencia(Incidencia inc) {
-        // 1. CONFIGURACIÓN DINÁMICA DEL EMISOR (Basado en tu lógica PHP)
+        // --- VARIABLES DINÁMICAS ---
         String remitenteUser = "";
-        String remitentePass = "Envera2025";
+        String remitentePass = ""; // Se asignará individualmente
+        String nombreExposicion = "";
         String destinatarioPrincipal = "";
         String asunto = "";
+        String centroNombre = "";
         String[] ccList = {};
         String bcc = "informaticaitc@jfgb.es";
 
+        // --- ASIGNACIÓN DE CREDENCIALES Y DATOS POR CENTRO ---
         if (inc.getIdCentro() == 1) { // Tenerife
+            centroNombre = "Tenerife";
             remitenteUser = "conserjeriaitc.tf@grupoenvera.org";
+            remitentePass = "envera2026"; // <--- Cambia aquí si es distinta
+            nombreExposicion = "Conserjería ITC Tenerife";
             destinatarioPrincipal = "cbetancor@itccanarias.org";
-            asunto = "Comunicación de Incidencia desde la conserjería del ITC en Tenerife.";
+            asunto = "Nueva Incidencia - ITC Tenerife";
             ccList = new String[]{"adelaida.gomez@grupoenvera.org"};
         }
         else if (inc.getIdCentro() == 2) { // Las Palmas
+            centroNombre = "Las Palmas";
             remitenteUser = "conserjeriaitc.gc@grupoenvera.org";
-            destinatarioPrincipal = "adominguez@itccanarias.org";
-            asunto = "Comunicación de Incidencia desde la conserjería del ITC en Las Palmas.";
+            remitentePass = "Envera2026"; // <--- Cambia aquí si es distinta
+            nombreExposicion = "Conserjería ITC Las Palmas";
+            destinatarioPrincipal = "dgi_cebrian@itccanarias.org";
+            asunto = "Nueva Incidencia - ITC Las Palmas";
             ccList = new String[]{"josea.henriquez@grupoenvera.org", "jiglesias@itccanarias.org"};
-        } else {
+        }
+        else {
+            System.err.println("EMAIL: No se envía correo, ID de centro desconocido: " + inc.getIdCentro());
             return;
         }
 
-        // 2. CONFIGURAR EL SENDER DE SPRING
+        // --- CONFIGURACIÓN DEL SENDER CON LOS DATOS ESPECÍFICOS DEL CENTRO ---
         JavaMailSenderImpl mailSender = configurarMailSender(remitenteUser, remitentePass);
 
-        // 3. ENVIAR EL EMAIL
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            helper.setFrom(remitenteUser, inc.getUsuario());
+            helper.setFrom(remitenteUser, nombreExposicion);
             helper.setTo(destinatarioPrincipal);
             helper.setSubject(asunto);
-            helper.setText(inc.getTexto(), false);
             helper.setBcc(bcc);
             helper.setReplyTo(remitenteUser);
 
@@ -68,13 +77,32 @@ public class EmailService {
                 helper.setCc(ccList);
             }
 
-            mailSender.send(message);
+            // Cuerpo del mensaje HTML
+            String cuerpoHtml = String.format(
+                    "<html><body style='font-family: sans-serif;'>" +
+                            "<h2 style='color: #2c3e50;'>Comunicación de Incidencia</h2>" +
+                            "<p>Se ha registrado una incidencia en la conserjería:</p>" +
+                            "<ul>" +
+                            "  <li><b>Centro:</b> %s</li>" +
+                            "  <li><b>Vigilante:</b> %s</li>" +
+                            "  <li><b>Fecha/Hora:</b> %s</li>" +
+                            "</ul>" +
+                            "<p><b>Descripción:</b></p>" +
+                            "<div style='padding: 15px; background-color: #f2f2f2; border-left: 5px solid #3498db;'>%s</div>" +
+                            "</body></html>",
+                    centroNombre,
+                    inc.getUsuario(),
+                    inc.getFechaHora() != null ? inc.getFechaHora().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")) : inc.getFecha(),
+                    inc.getTexto().replace("\n", "<br>")
+            );
 
-            // 4. GUARDAR LOG (Solo si el envío fue exitoso)
+            helper.setText(cuerpoHtml, true);
+
+            mailSender.send(message);
             guardarLogEmail(inc, destinatarioPrincipal);
 
         } catch (Exception e) {
-            System.err.println("CRÍTICO: Error enviando email de incidencia: " + e.getMessage());
+            System.err.println("CRÍTICO: Error enviando email desde " + centroNombre + " (" + remitenteUser + "): " + e.getMessage());
         }
     }
 
@@ -89,6 +117,10 @@ public class EmailService {
         props.put("mail.transport.protocol", "smtp");
         props.put("mail.smtp.auth", "true");
         props.put("mail.smtp.starttls.enable", "true");
+        props.put("mail.smtp.connectiontimeout", "5000");
+        props.put("mail.smtp.timeout", "5000");
+        props.put("mail.smtp.writetimeout", "5000");
+
         return mailSender;
     }
 
@@ -96,14 +128,12 @@ public class EmailService {
         try {
             EnvioEmail log = new EnvioEmail();
             LocalDateTime ahora = LocalDateTime.now();
-
             log.setDestinatario(destinatario);
             log.setFecha(ahora.format(DateTimeFormatter.ofPattern("yyyyMMdd")));
             log.setHora(ahora.format(DateTimeFormatter.ofPattern("HHmmss")));
             log.setFechaHoraDt(ahora);
             log.setTexto(inc.getTexto());
             log.setEmisor(inc.getUsuario());
-
             envioEmailRepo.save(log);
         } catch (Exception e) {
             System.err.println("Error guardando log de email: " + e.getMessage());

@@ -15,33 +15,65 @@ import java.util.Optional;
 @Service
 public class ProveedorService {
 
-    @Autowired private ProveedorRepository proveedorRepo;
-    @Autowired private EmpleadoProveedorRepository empleadoRepo;
+    @Autowired
+    private ProveedorRepository proveedorRepo;
 
-    // --- PROVEEDORES ---
-    public List<Proveedor> listarProveedores(Integer idCentro) {
+    @Autowired
+    private EmpleadoProveedorRepository empleadoRepo;
+
+    // --- MÉTODOS DE PROVEEDORES ---
+
+    /**
+     * Lista todos los proveedores asociados a un centro específico.
+     */
+    public List<Proveedor> listarPorCentro(Integer idCentro) {
         return proveedorRepo.findByIdCentro(idCentro);
     }
 
-    public Proveedor guardarProveedor(Proveedor p) {
-        if (p.getFechaAlta() == null) p.setFechaAlta(LocalDate.now());
-        return proveedorRepo.save(p);
-    }
-
-    public Optional<Proveedor> obtenerProveedor(String cif, Integer idCentro) {
+    /**
+     * Obtiene un proveedor por su clave compuesta (CIF + ID Centro).
+     * Esto soluciona errores de tipos incompatibles en controladores y tests.
+     */
+    public Optional<Proveedor> obtenerPorId(String cif, Integer idCentro) {
         return proveedorRepo.findById(new ProveedorId(cif, idCentro));
     }
 
-    // --- EMPLEADOS ---
+    /**
+     * Guarda o actualiza un proveedor, asignando fecha de alta si no existe.
+     */
+    public Proveedor guardar(Proveedor p) {
+        if (p.getFechaAlta() == null) {
+            p.setFechaAlta(LocalDate.now());
+        }
+        return proveedorRepo.save(p);
+    }
+
+    /**
+     * Elimina un proveedor por su clave compuesta.
+     */
+    public void eliminar(String cif, Integer idCentro) {
+        proveedorRepo.deleteById(new ProveedorId(cif, idCentro));
+    }
+
+    // --- MÉTODOS DE EMPLEADOS DE PROVEEDOR (CORRECCIÓN image_612b4d.png) ---
+
+    /**
+     * Lista los empleados de un proveedor específico en un centro.
+     */
     public List<EmpleadoProveedor> listarEmpleados(String cif, Integer idCentro) {
         return empleadoRepo.findByCifProveedorAndIdCentro(cif, idCentro);
     }
 
+    /**
+     * Registra un nuevo empleado para un proveedor.
+     */
     public EmpleadoProveedor guardarEmpleado(EmpleadoProveedor emp) {
-        if (emp.getFechaAcceso() == null) emp.setFechaAcceso(LocalDate.now());
         return empleadoRepo.save(emp);
     }
 
+    /**
+     * Elimina un empleado por su ID primario.
+     */
     public void eliminarEmpleado(Integer id) {
         empleadoRepo.deleteById(id);
     }

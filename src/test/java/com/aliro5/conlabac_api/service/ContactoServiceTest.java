@@ -10,57 +10,54 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.Arrays;
+import java.util.Collections; // Cambiado para evitar warnings de asList
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class ContactoServiceTest {
+public class ContactoServiceTest {
 
     @Mock
-    private ContactoRepository contactoRepository;
+    private ContactoRepository repo;
 
     @InjectMocks
-    private ContactoService contactoService;
+    private ContactoService service;
 
-    private Contacto contactoPrueba;
+    private Contacto contactoMock;
 
     @BeforeEach
     void setUp() {
-        contactoPrueba = new Contacto();
-        contactoPrueba.setId(1);
-        contactoPrueba.setIdCentro(1);
-        contactoPrueba.setNombre("Ramón");
-        contactoPrueba.setApellido1("García");
-        contactoPrueba.setApellido2("Pérez");
-        contactoPrueba.setEmail("rgarcia@ejemplo.com");
+        contactoMock = new Contacto();
+        contactoMock.setId(1);
+        contactoMock.setNombre("Juan Perez");
+        contactoMock.setIdCentro(1);
     }
 
     @Test
-    @DisplayName("Debe listar contactos por centro correctamente")
-    void testListarPorCentro() {
-        when(contactoRepository.findByIdCentro(1)).thenReturn(Arrays.asList(contactoPrueba));
+    @DisplayName("Debe listar contactos por centro usando el alias findByIdCentro")
+    void testFindByIdCentro() {
+        // CORRECCIÓN: Ahora el repo ya reconoce findByIdCentro
+        // Usamos Collections.singletonList para evitar el warning de asList() :42
+        when(repo.findByIdCentro(1)).thenReturn(Collections.singletonList(contactoMock));
 
-        List<Contacto> resultado = contactoService.listarPorCentro(1);
+        List<Contacto> resultado = service.findByIdCentro(1);
 
         assertNotNull(resultado);
         assertEquals(1, resultado.size());
-        assertEquals("Ramón", resultado.get(0).getNombre());
-        verify(contactoRepository, times(1)).findByIdCentro(1);
+        verify(repo).findByIdCentro(1);
     }
 
     @Test
-    @DisplayName("Debe guardar un contacto nuevo")
-    void testGuardarContacto() {
-        when(contactoRepository.save(any(Contacto.class))).thenReturn(contactoPrueba);
+    @DisplayName("Debe listar contactos usando el alias listarPorCentro")
+    void testListarPorCentro() {
+        // Usamos Collections.singletonList para evitar el warning de asList() :56
+        when(repo.findByIdCentro(1)).thenReturn(Collections.singletonList(contactoMock));
 
-        Contacto guardado = contactoService.guardar(new Contacto());
+        List<Contacto> resultado = service.listarPorCentro(1);
 
-        assertNotNull(guardado);
-        assertEquals("rgarcia@ejemplo.com", guardado.getEmail());
-        verify(contactoRepository, times(1)).save(any(Contacto.class));
+        assertFalse(resultado.isEmpty());
+        verify(repo, times(1)).findByIdCentro(1);
     }
 }

@@ -10,36 +10,39 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/entreturnos")
+@RequestMapping("/api/entre-turnos")
+@CrossOrigin(origins = "*") // Permite la conexión desde el puerto 8081 (Web)
 public class EntreTurnoRestController {
 
     @Autowired
     private EntreTurnoService servicio;
 
-    // GET /api/entreturnos/historial?centroId=1
     @GetMapping("/historial")
-    public List<EntreTurno> historial(@RequestParam("centroId") Integer centroId) {
-        return servicio.listarHistorial(centroId);
+    public ResponseEntity<List<EntreTurno>> historial(@RequestParam("centroId") Integer centroId) {
+        System.out.println("API: Consultando historial de relevos para centro: " + centroId);
+        List<EntreTurno> lista = servicio.listarHistorial(centroId);
+        return ResponseEntity.ok(lista != null ? lista : List.of());
     }
 
-    // GET /api/entreturnos/pendientes?centroId=1
     @GetMapping("/pendientes")
-    public List<EntreTurno> pendientes(@RequestParam("centroId") Integer centroId) {
-        return servicio.listarPendientes(centroId);
+    public ResponseEntity<List<EntreTurno>> pendientes(@RequestParam("centroId") Integer centroId) {
+        List<EntreTurno> lista = servicio.listarPendientes(centroId);
+        return ResponseEntity.ok(lista != null ? lista : List.of());
     }
 
-    // POST /api/entreturnos (Crear)
     @PostMapping
-    public EntreTurno crear(@RequestBody EntreTurno nota) {
-        return servicio.crear(nota);
+    public ResponseEntity<EntreTurno> crear(@RequestBody EntreTurno nota) {
+        return ResponseEntity.ok(servicio.guardar(nota));
     }
 
-    // PUT /api/entreturnos/{id}/leer (Marcar leído)
-    // Espera un JSON simple: { "lector": "Nombre Usuario" }
     @PutMapping("/{id}/leer")
     public ResponseEntity<Void> marcarLeido(@PathVariable Integer id, @RequestBody Map<String, String> body) {
-        String lector = body.get("lector");
-        servicio.marcarLeido(id, lector);
-        return ResponseEntity.ok().build();
+        try {
+            String lector = body.get("lector");
+            servicio.marcarLeido(id, lector);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
     }
 }

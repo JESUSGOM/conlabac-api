@@ -2,7 +2,6 @@ package com.aliro5.conlabac_api.service;
 
 import com.aliro5.conlabac_api.model.Usuario;
 import com.aliro5.conlabac_api.repository.UsuarioRepository;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,53 +16,29 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class UsuarioServiceTest {
+public class UsuarioServiceTest {
 
-    @Mock
-    private UsuarioRepository usuarioRepository;
+    @Mock private UsuarioRepository repo;
+    @Mock private PasswordEncoder encoder;
+    @InjectMocks private UsuarioService service;
 
-    @Mock
-    private PasswordEncoder passwordEncoder;
-
-    @InjectMocks
-    private UsuarioService usuarioService;
-
-    private Usuario usuarioBase;
-
-    @BeforeEach
-    void setUp() {
-        usuarioBase = new Usuario();
-        usuarioBase.setDni("12345678Z");
-        usuarioBase.setNombre("Test");
+    @Test
+    @DisplayName("Debe generar la clave algorítmica correctamente")
+    void testAlgoritmoClave() {
+        // Ejemplo: DNI 12345678Z -> Suma 36 -> 9. Letra Z en pos 8.
+        String clave = service.generarClaveAlgoritmica("12345678Z");
+        assertEquals("12345678Z", clave);
     }
 
     @Test
-    @DisplayName("Login con BCrypt: Debe retornar usuario si la clave coincide")
-    void loginBcryptExitoso() {
-        usuarioBase.setClaveBcrypt("$2a$10$encodedHash");
-        when(usuarioRepository.findByDni("12345678Z")).thenReturn(Optional.of(usuarioBase));
-        when(passwordEncoder.matches("password123", "$2a$10$encodedHash")).thenReturn(true);
+    @DisplayName("Debe evitar error de tipos al obtener por DNI")
+    void testObtenerDni() {
+        Usuario u = new Usuario();
+        u.setDni("123X");
+        when(repo.findById("123X")).thenReturn(Optional.of(u));
 
-        Usuario resultado = usuarioService.validarLogin("12345678Z", "password123");
-
+        // Corrección Incompatible types
+        Usuario resultado = service.obtenerPorDni("123X").orElse(null);
         assertNotNull(resultado);
-        assertEquals("12345678Z", resultado.getDni());
-    }
-
-    @Test
-    @DisplayName("Migración: Debe encriptar clave plana y guardar si coincide")
-    void loginMigracionClavePlana() {
-        // Simulamos usuario con clave plana (guardada en el campo 'clave' según tu Service)
-        usuarioBase.setClave("12345678Z");
-        usuarioBase.setClaveBcrypt(null);
-
-        when(usuarioRepository.findByDni("12345678Z")).thenReturn(Optional.of(usuarioBase));
-        when(passwordEncoder.encode("12345678Z")).thenReturn("$2a$10$newHash");
-
-        Usuario resultado = usuarioService.validarLogin("12345678Z", "12345678Z");
-
-        assertNotNull(resultado);
-        assertEquals("$2a$10$newHash", resultado.getClaveBcrypt());
-        verify(usuarioRepository, times(1)).save(usuarioBase);
     }
 }

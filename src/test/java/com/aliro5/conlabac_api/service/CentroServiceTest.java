@@ -10,7 +10,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.Arrays;
+import java.util.Collections; // Mejor que Arrays.asList para un solo elemento
 import java.util.List;
 import java.util.Optional;
 
@@ -36,9 +36,10 @@ class CentroServiceTest {
     @Test
     @DisplayName("Debe retornar todos los centros")
     void testListarTodos() {
-        when(centroRepository.findAll()).thenReturn(Arrays.asList(centroPrueba));
+        // Uso de Collections.singletonList para evitar el warning de asList
+        when(centroRepository.findAll()).thenReturn(Collections.singletonList(centroPrueba));
 
-        List<Centro> resultado = centroService.listarTodos(); // Ajusta según tu nombre de método
+        List<Centro> resultado = centroService.listarTodos();
 
         assertFalse(resultado.isEmpty());
         assertEquals(1, resultado.size());
@@ -48,9 +49,11 @@ class CentroServiceTest {
     @Test
     @DisplayName("Debe encontrar un centro por su ID")
     void testBuscarPorId() {
+        // Configuramos el mock para devolver un Optional
         when(centroRepository.findById(1)).thenReturn(Optional.of(centroPrueba));
 
-        Centro encontrado = centroService.obtenerPorId(1);
+        // CORRECCIÓN image_be8266.png: Extraemos el valor para que sea tipo Centro
+        Centro encontrado = centroService.obtenerPorId(1).orElse(null);
 
         assertNotNull(encontrado);
         assertEquals("Madrid", encontrado.getProvincia());

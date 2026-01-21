@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class PlantaService {
@@ -13,17 +14,23 @@ public class PlantaService {
     @Autowired
     private PlantaRepository repo;
 
-    // Listar por centro
     public List<Planta> listarPorCentro(Integer idCentro) {
         return repo.findByIdCentro(idCentro);
     }
 
-    // Guardar (Crear o Editar)
+    // Método necesario para el controlador
+    public List<Planta> listarTodas() {
+        return repo.findAll();
+    }
+
+    public Optional<Planta> obtenerPorId(Integer id) {
+        return repo.findById(id);
+    }
+
     public Planta guardar(Planta planta) {
         return repo.save(planta);
     }
 
-    // Eliminar
     public void eliminar(Integer id) {
         repo.deleteById(id);
     }

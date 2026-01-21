@@ -24,38 +24,29 @@ public class TelefonoService {
         return repo.findPendientes(idCentro);
     }
 
-    // REGISTRAR NUEVA LLAMADA
+    // NUEVO: Necesario para desempaquetar Optional en tests
+    public Optional<Telefono> obtenerPorId(Integer id) {
+        return repo.findById(id);
+    }
+
     public Telefono registrar(Telefono tel) {
         LocalDateTime ahora = LocalDateTime.now();
-
-        // Fechas de registro
         tel.setFechaHoraRegistro(ahora);
         tel.setFecha(ahora.format(DateTimeFormatter.ofPattern("yyyyMMdd")));
         tel.setHora(ahora.format(DateTimeFormatter.ofPattern("HHmmss")));
-
-        // Estado inicial: Pendiente (0)
         tel.setComunicado(0);
-        tel.setFechaEntrega(null);
-        tel.setHoraEntrega(null);
-        tel.setFechaHoraEntrega(null);
-
         return repo.save(tel);
     }
 
-    // MARCAR COMO COMUNICADO
     public void marcarComunicado(Integer id) {
-        Optional<Telefono> opcional = repo.findById(id);
-        if (opcional.isPresent()) {
-            Telefono tel = opcional.get();
+        repo.findById(id).ifPresent(tel -> {
             LocalDateTime ahora = LocalDateTime.now();
-
-            tel.setComunicado(1); // 1 = Entregado
+            tel.setComunicado(1);
             tel.setFechaHoraEntrega(ahora);
             tel.setFechaEntrega(ahora.format(DateTimeFormatter.ofPattern("yyyyMMdd")));
             tel.setHoraEntrega(ahora.format(DateTimeFormatter.ofPattern("HHmmss")));
-
             repo.save(tel);
-        }
+        });
     }
 
     public void ejecutarMantenimientoFechas() {

@@ -6,10 +6,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/centros")
+@CrossOrigin(origins = "*") // Permite que la Web conecte sin bloqueos de navegador
 public class CentroRestController {
 
     @Autowired
@@ -22,13 +22,9 @@ public class CentroRestController {
 
     @GetMapping("/{id}")
     public ResponseEntity<Centro> obtenerCentro(@PathVariable Integer id) {
-        Optional<Centro> centro = centroService.obtenerPorId(id);
-
-        if (centro.isPresent()) {
-            return ResponseEntity.ok(centro.get());
-        } else {
-            return ResponseEntity.notFound().build();
-        }
+        return centroService.obtenerPorId(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping

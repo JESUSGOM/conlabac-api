@@ -11,13 +11,12 @@ public class Usuario {
     private String dni;
 
     @Column(name = "UsuClave", length = 9)
-    private String clavePlana; // Claves antiguas
+    private String clavePlana;
 
     @Column(name = "UsuClaveBcrypt", length = 60)
-    private String claveBcrypt; // Claves seguras
+    private String claveBcrypt;
 
-    // --- NUEVO: CAMPO TEMPORAL PARA RECIBIR LA CLAVE DE LA WEB ---
-    @Transient // Importante: No se guarda en BD, solo sirve de transporte
+    @Transient
     private String clave;
 
     @Column(name = "UsuNombre", length = 50, nullable = false)
@@ -35,8 +34,7 @@ public class Usuario {
     @Column(name = "UsuTipo", length = 1, nullable = false)
     private String tipo;
 
-    public Usuario() {
-    }
+    public Usuario() {}
 
     // --- GETTERS Y SETTERS ---
     public String getDni() { return dni; }
@@ -48,7 +46,6 @@ public class Usuario {
     public String getClaveBcrypt() { return claveBcrypt; }
     public void setClaveBcrypt(String claveBcrypt) { this.claveBcrypt = claveBcrypt; }
 
-    // Getter y Setter para el nuevo campo temporal
     public String getClave() { return clave; }
     public void setClave(String clave) { this.clave = clave; }
 

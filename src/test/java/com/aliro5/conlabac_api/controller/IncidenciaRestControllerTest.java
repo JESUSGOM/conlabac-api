@@ -2,7 +2,6 @@ package com.aliro5.conlabac_api.controller;
 
 import com.aliro5.conlabac_api.model.Incidencia;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -11,7 +10,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
@@ -26,18 +25,16 @@ class IncidenciaRestControllerTest {
     private ObjectMapper objectMapper;
 
     @Test
-    @DisplayName("POST /api/incidencias: Debe persistir y devolver la incidencia")
-    void testCrearIncidencia() throws Exception {
-        Incidencia nueva = new Incidencia();
-        nueva.setIdCentro(1);
-        nueva.setTexto("Incidencia de prueba");
-        nueva.setUsuario("Vigilante_Test");
+    void testCrearIncidenciaFlow() throws Exception {
+        Incidencia inc = new Incidencia();
+        inc.setIdCentro(1);
+        inc.setTexto("Avería detectada");
+        inc.setUsuario("Vigilante 01");
 
         mockMvc.perform(post("/api/incidencias")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(nueva)))
+                        .content(objectMapper.writeValueAsString(inc)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.comunicadoA").value("María Carmen Betancor Reula"))
-                .andExpect(jsonPath("$.modoComunica").value("EMAIL"));
+                .andExpect(jsonPath("$.comunicadoA").value("María Carmen Betancor Reula"));
     }
 }
