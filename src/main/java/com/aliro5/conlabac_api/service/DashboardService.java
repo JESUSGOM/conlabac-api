@@ -27,24 +27,30 @@ public class DashboardService {
     @Autowired
     private MovimientoEmpleadoRepository contrataRepo;
 
+    /**
+     * Calcula las estadísticas en tiempo real para el panel principal de ALIROS.
+     */
     public DashboardStats obtenerEstadisticas(Integer idCentro) {
-        // 1. Relevos sin leer
+
+        // 1. Relevos pendientes de lectura (Turnos)
         long relevos = relevoRepo.findByIdCentroAndFechaHoraLeidoIsNullOrderByFechaHoraEscritoDesc(idCentro).size();
 
-        // 2. Paquetes comunicados="NO"
+        // 2. Paquetes recibidos que aún no se han entregado al destinatario
         long paquetes = paqueteRepo.findByIdCentroAndComunicadoOrderByFechaHoraRecepcionDesc(idCentro, "NO").size();
 
-        // 3. Llaves fuera (Activos)
-        long llaves = keyRepo.findActivosPorCentro(idCentro).size();
+        // 3. Llaves fuera del tablero (Sincronizado con la nueva lógica de KeyMoves)
+        // Usamos el método que busca específicamente donde la fecha de recepción es nula o vacía
+        long llaves = keyRepo.findByCentroAndFechaDevolucionIsNull(idCentro).size();
 
-        // 4. Visitas dentro HOY
+        // 4. Visitantes que han entrado HOY y aún no han registrado su salida
         LocalDateTime inicioHoy = LocalDate.now().atStartOfDay();
         LocalDateTime finHoy = LocalDate.now().atTime(LocalTime.MAX);
         long visitas = visitaRepo.findByIdCentroAndFechaSalidaIsNullAndFechaEntradaBetween(idCentro, inicioHoy, finHoy).size();
 
-        // 5. Contratas dentro
+        // 5. Personal de Contratas/Empresas externas actualmente dentro de las instalaciones
         long contratas = contrataRepo.findByIdCentroAndFechaSalidaIsNullOrderByFechaEntradaDesc(idCentro).size();
 
+        // Retornamos el DTO con todos los contadores para el Dashboard
         return new DashboardStats(relevos, paquetes, llaves, visitas, contratas);
     }
 }
