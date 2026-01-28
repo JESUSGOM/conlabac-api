@@ -1,6 +1,7 @@
-package com.aliro5.conlabac_api.config; // CORRECCIÓN: Declaración de paquete
+package com.aliro5.conlabac_api.config;
 
 import com.aliro5.conlabac_api.repository.IncidenciaRepository;
+import com.aliro5.conlabac_api.repository.EnvioEmailRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.annotation.Configuration;
@@ -9,33 +10,48 @@ import org.springframework.context.event.EventListener;
 @Configuration
 public class DataMaintenanceConfig {
 
-    // CORRECCIÓN: Inyección mediante constructor para evitar el warning de 'Field injection'
     private final IncidenciaRepository incidenciaRepo;
+    private final EnvioEmailRepository emailRepo;
 
     @Autowired
-    public DataMaintenanceConfig(IncidenciaRepository incidenciaRepo) {
+    public DataMaintenanceConfig(IncidenciaRepository incidenciaRepo, EnvioEmailRepository emailRepo) {
         this.incidenciaRepo = incidenciaRepo;
+        this.emailRepo = emailRepo;
     }
 
     /**
      * Se ejecuta automáticamente cuando la aplicación está lista.
-     * Actualiza IncFechaHora_dt combinando IncFecha (YYYYMMDD) e IncHora (HHMMSS).
+     * Sincroniza los campos datetime de Incidencias y EnvioEmail.
      */
     @EventListener(ApplicationReadyEvent.class)
     public void ejecutarMantenimiento() {
+        // 1. Mantenimiento de Incidencias
         try {
             System.out.println(">>> MANTENIMIENTO: Iniciando actualización de fechas en Incidencias...");
-
-            // Llama al método native query que añadimos al repositorio
-            int actualizados = incidenciaRepo.actualizarFechasNulas();
-
-            if (actualizados > 0) {
-                System.out.println(">>> MANTENIMIENTO: Se han corregido " + actualizados + " registros exitosamente.");
+            int actualizadosInc = incidenciaRepo.actualizarFechasNulas();
+            if (actualizadosInc > 0) {
+                System.out.println(">>> MANTENIMIENTO [Incidencias]: Se han corregido " + actualizadosInc + " registros.");
             } else {
-                System.out.println(">>> MANTENIMIENTO: No hay incidencias pendientes de actualizar.");
+                System.out.println(">>> MANTENIMIENTO [Incidencias]: No hay pendientes.");
             }
         } catch (Exception e) {
-            System.err.println(">>> ERROR CRÍTICO en mantenimiento: " + e.getMessage());
+            System.err.println(">>> ERROR en mantenimiento de Incidencias: " + e.getMessage());
+        }
+
+        // 2. Mantenimiento de EnvioEmail (Basado en tu SQL aportado)
+        try {
+            System.out.println(">>> MANTENIMIENTO: Iniciando actualización de fechas en EnvioEmail...");
+
+            // Llama al método que combina EnEmFecha y EnEmHora
+            int actualizadosEmail = emailRepo.actualizarFechasNulasEmails();
+
+            if (actualizadosEmail > 0) {
+                System.out.println(">>> MANTENIMIENTO [EnvioEmail]: Se han corregido " + actualizadosEmail + " registros exitosamente.");
+            } else {
+                System.out.println(">>> MANTENIMIENTO [EnvioEmail]: No hay correos pendientes de actualizar.");
+            }
+        } catch (Exception e) {
+            System.err.println(">>> ERROR CRÍTICO en mantenimiento de Emails: " + e.getMessage());
         }
     }
 }

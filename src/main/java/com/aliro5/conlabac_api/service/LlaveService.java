@@ -13,40 +13,32 @@ import java.util.Optional;
 @Service
 public class LlaveService {
 
-    private static final Logger logger = LoggerFactory.getLogger(LlaveService.class);
+    @Autowired private LlaveRepository llaveRepository;
 
-    @Autowired
-    private LlaveRepository llaveRepository;
+    private static final Logger logTF = LoggerFactory.getLogger("TenerifeLogger");
+    private static final Logger logGC = LoggerFactory.getLogger("GranCanariaLogger");
 
-    /**
-     * Obtiene todas las llaves de un centro para el inventario.
-     */
     public List<Llave> listarPorCentro(Integer idCentro) {
-        logger.info("Buscando inventario completo de llaves para el centro: {}", idCentro);
         return llaveRepository.findByIdCentro(idCentro);
     }
 
-    /**
-     * Obtiene solo las llaves que no están prestadas actualmente.
-     */
     public List<Llave> listarDisponibles(Integer idCentro) {
-        logger.info("Buscando llaves disponibles para préstamo en centro: {}", idCentro);
         return llaveRepository.findDisponiblesPorCentro(idCentro);
     }
 
-    /**
-     * Busca una llave por su código alfanumérico (Ej: K-01).
-     */
     public Llave obtenerPorCodigo(String codigo) {
-        return llaveRepository.findByCodigo(codigo)
-                .orElseGet(() -> {
-                    logger.warn("No se encontró la llave con código: {}", codigo);
-                    return null;
-                });
+        return llaveRepository.findByCodigo(codigo).orElse(null);
     }
 
     public Llave guardar(Llave llave) {
-        return llaveRepository.save(llave);
+        Llave guardada = llaveRepository.save(llave);
+
+        // LOG DE SEDE (Inventario/Edición)
+        String msg = "LLAVE ACTUALIZADA/CREADA: " + llave.getCodigo() + " - " + llave.getPuerta();
+        if (llave.getIdCentro() == 1) logTF.info(msg);
+        else if (llave.getIdCentro() == 2) logGC.info(msg);
+
+        return guardada;
     }
 
     public Optional<Llave> obtenerPorId(Integer id) {
@@ -54,6 +46,11 @@ public class LlaveService {
     }
 
     public void eliminar(Integer id) {
-        llaveRepository.deleteById(id);
+        obtenerPorId(id).ifPresent(ll -> {
+            String msg = "LLAVE ELIMINADA del inventario: " + ll.getCodigo();
+            if (ll.getIdCentro() == 1) logTF.info(msg);
+            else if (ll.getIdCentro() == 2) logGC.info(msg);
+            llaveRepository.deleteById(id);
+        });
     }
 }

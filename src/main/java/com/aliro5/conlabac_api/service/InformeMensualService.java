@@ -12,10 +12,9 @@ import org.springframework.stereotype.Service;
 
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
-import java.text.DecimalFormat;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
 
@@ -29,7 +28,6 @@ public class InformeMensualService {
 
     private static final Color ROJO_CORP = new Color(218, 77, 98);
     private static final Font F_TITULO = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14);
-    private static final Font F_NORMAL = FontFactory.getFont(FontFactory.HELVETICA, 10);
     private static final Font F_BOLD = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10);
     private static final Font F_HEADER_BLANCO = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, Color.WHITE);
     private static final Font F_SMALL = FontFactory.getFont(FontFactory.HELVETICA, 8);
@@ -41,34 +39,30 @@ public class InformeMensualService {
 
         try {
             PdfWriter writer = PdfWriter.getInstance(document, out);
-            MembreteEvento event = new MembreteEvento();
-            writer.setPageEvent(event);
-
+            writer.setPageEvent(new MembreteEvento());
             document.open();
 
             String nombreMes = java.time.Month.of(mes).getDisplayName(TextStyle.FULL, new Locale("es", "ES")).toUpperCase();
-            LocalDate fechaRef = LocalDate.of(anio, mes, 1).plusMonths(1).minusDays(1);
-            String fechaStr = fechaRef.getDayOfMonth() + " de " +
-                    java.time.Month.of(fechaRef.getMonthValue()).getDisplayName(TextStyle.FULL, new Locale("es", "ES")) +
-                    " de " + anio;
+            String fechaStr = LocalDate.now().format(DateTimeFormatter.ofPattern("dd 'de' MMMM 'de' yyyy", new Locale("es", "ES")));
 
             generarPortada(document);
-
             document.newPage();
             generarPaginaDatos(document, idCentro, nombreMes, fechaStr);
-
             document.newPage();
             generarPaginaPersonal(document, idCentro);
 
-            // CORRECCIÓN: El método ahora está definido correctamente abajo
+            // Aperturas
             List<AperturaExtra> aperturas = aperturaRepo.findByCentroMesAnio(idCentro, mes, anio);
             if (aperturas != null && !aperturas.isEmpty()) {
                 document.newPage();
                 generarTablaAperturas(document, aperturas);
             }
 
+            // INCIDENCIAS: Conversión de int a String para evitar "incompatible types"
             document.newPage();
-            List<Incidencia> incidencias = incidenciaRepo.findByCentroMesAnio(idCentro, mes, anio);
+            String mesStr = String.format("%02d", mes);
+            String anioStr = String.valueOf(anio);
+            List<Incidencia> incidencias = incidenciaRepo.findByCentroMesAnio(idCentro, mesStr, anioStr);
             generarTablaIncidencias(document, incidencias);
 
             document.newPage();
@@ -80,8 +74,6 @@ public class InformeMensualService {
         }
         return out.toByteArray();
     }
-
-    // --- MÉTODOS DE APOYO ---
 
     private void generarPortada(Document doc) throws DocumentException {
         Image img = cargarImagen("static/images/logoitcizq.png");
@@ -119,7 +111,6 @@ public class InformeMensualService {
         doc.add(t);
     }
 
-    // MÉTODO QUE DABA ERROR DE RESOLUCIÓN
     private void generarTablaAperturas(Document doc, List<AperturaExtra> lista) throws DocumentException {
         Paragraph p = new Paragraph("RELACIÓN DE APERTURAS EXTRAORDINARIAS", F_TITULO);
         p.setAlignment(Element.ALIGN_CENTER);
@@ -127,9 +118,8 @@ public class InformeMensualService {
         PdfPTable t = new PdfPTable(4);
         t.setWidthPercentage(100);
         addCellHeaderBlanco(t, "FECHA"); addCellHeaderBlanco(t, "INICIO"); addCellHeaderBlanco(t, "FIN"); addCellHeaderBlanco(t, "MOTIVO");
-        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy");
         for(AperturaExtra ae : lista) {
-            addCellDataCenter(t, ae.getFecha().format(fmt));
+            addCellDataCenter(t, ae.getFecha().toString());
             addCellDataCenter(t, ae.getHoraInicio().toString());
             addCellDataCenter(t, ae.getHoraFinal().toString());
             addCellData(t, ae.getMotivo());
@@ -158,7 +148,6 @@ public class InformeMensualService {
         doc.add(p);
     }
 
-    // --- UTILIDADES ---
     private Image cargarImagen(String path) {
         try { return Image.getInstance(new ClassPathResource(path).getURL()); } catch (Exception e) { return null; }
     }
@@ -177,14 +166,12 @@ public class InformeMensualService {
     class MembreteEvento extends PdfPageEventHelper {
         @Override
         public void onStartPage(PdfWriter writer, Document document) {
-            if (writer.getPageNumber() == 1) return;
             try {
-                PdfContentByte cb = writer.getDirectContent();
                 Image logo = cargarImagen("static/images/logoitcizq.png");
                 if (logo != null) {
                     logo.scaleToFit(80, 30);
                     logo.setAbsolutePosition(30, PageSize.A4.rotate().getHeight() - 50);
-                    cb.addImage(logo);
+                    writer.getDirectContent().addImage(logo);
                 }
             } catch (Exception e) {}
         }

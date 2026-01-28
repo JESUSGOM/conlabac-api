@@ -44,7 +44,7 @@ public class EmailService {
             nombreExposicion = "Conserjería ITC Tenerife";
             destinatarioPrincipal = "cbetancor@itccanarias.org";
             asunto = "Nueva Incidencia - ITC Tenerife";
-            ccList = new String[]{"adelaida.gomez@grupoenvera.org"};
+            ccList = new String[]{"gloria.santana@grupoenvera.org"};
         }
         else if (inc.getIdCentro() == 2) { // Las Palmas
             centroNombre = "Las Palmas";

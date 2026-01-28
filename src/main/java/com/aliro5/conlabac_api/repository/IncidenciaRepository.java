@@ -1,41 +1,31 @@
 package com.aliro5.conlabac_api.repository;
 
 import com.aliro5.conlabac_api.model.Incidencia;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.util.List;
 
 @Repository
 public interface IncidenciaRepository extends JpaRepository<Incidencia, Integer> {
 
-    /**
-     * MÉTODO DE MANTENIMIENTO CORREGIDO:
-     * Actualiza el campo LocalDateTime (IncFechaHora_dt) solo si los campos legacy
-     * tienen el formato correcto (8 caracteres para fecha y 6 para hora) y son numéricos.
-     * Esto evita errores como "Incorrect datetime value: '00'".
-     */
+    // Listado simple para servicios antiguos
+    List<Incidencia> findByCentroOrderByFechaHoraDtDesc(Integer centro);
+
+    // Listado paginado para el nuevo panel web
+    Page<Incidencia> findByCentroOrderByFechaHoraDtDesc(Integer centro, Pageable pageable);
+
+    @Query("SELECT i FROM Incidencia i WHERE i.centro = :centro AND " +
+            "SUBSTRING(i.fecha, 5, 2) = :mes AND SUBSTRING(i.fecha, 1, 4) = :anio")
+    List<Incidencia> findByCentroMesAnio(@Param("centro") int centro, @Param("mes") String mes, @Param("anio") String anio);
+
     @Modifying
     @Transactional
-    @Query(value = "UPDATE Incidencias " +
-            "SET IncFechaHora_dt = STR_TO_DATE(CONCAT(IncFecha, IncHora), '%Y%m%d%H%i%s') " +
-            "WHERE IncFechaHora_dt IS NULL " +
-            "AND LENGTH(IncFecha) = 8 " +
-            "AND LENGTH(IncHora) = 6 " +
-            "AND IncFecha REGEXP '^[0-9]+$' " +
-            "AND IncHora REGEXP '^[0-9]+$'", nativeQuery = true)
+    @Query("UPDATE Incidencia i SET i.fechaHoraDt = CURRENT_TIMESTAMP WHERE i.fechaHoraDt IS NULL")
     int actualizarFechasNulas();
-
-    // Buscar por centro y ordenar descendente (la más nueva arriba)
-    List<Incidencia> findByIdCentroOrderByFechaHoraDesc(Integer idCentro);
-
-    @Query(value = "SELECT * FROM Incidencias WHERE MONTH(IncFechaHora_dt) = :mes AND YEAR(IncFechaHora_dt) = :anio AND IncCentro = :idCentro ORDER BY IncFechaHora_dt", nativeQuery = true)
-    List<Incidencia> findByMesAndAnioAndCentro(@Param("mes") int mes, @Param("anio") int anio, @Param("idCentro") int idCentro);
-
-    @Query(value = "SELECT * FROM Incidencias WHERE IncCentro = :idCentro AND MONTH(IncFechaHora_dt) = :mes AND YEAR(IncFechaHora_dt) = :anio ORDER BY IncFechaHora_dt ASC", nativeQuery = true)
-    List<Incidencia> findByCentroMesAnio(@Param("idCentro") Integer idCentro, @Param("mes") int mes, @Param("anio") int anio);
 }
