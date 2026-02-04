@@ -21,7 +21,6 @@ public class IncidenciaService {
     @Autowired
     private IncidenciaRepository repo;
 
-    // Loggers específicos para separar por sede
     private static final Logger logTF = LoggerFactory.getLogger("TenerifeLogger");
     private static final Logger logGC = LoggerFactory.getLogger("GranCanariaLogger");
 
@@ -44,16 +43,19 @@ public class IncidenciaService {
         inc.setModoComunica("EMAIL");
         configurarDestinatario(inc);
 
-        Incidencia guardada = repo.save(inc);
+        // CORRECCIÓN: Validar longitud del usuario para evitar el error de truncado en DB
+        if (inc.getUsuario() != null && inc.getUsuario().length() > 45) {
+            inc.setUsuario(inc.getUsuario().substring(0, 45));
+        }
 
-        // Registro de LOG discriminado por centro
+        Incidencia guardada = repo.save(inc);
         registrarLogSede(inc);
 
         return guardada;
     }
 
     private void registrarLogSede(Incidencia inc) {
-        String msg = "NUEVA INCIDENCIA registrada por " + inc.getUsuario() + ": " + inc.getTexto();
+        String msg = "NUEVA INCIDENCIA: " + inc.getTexto();
         if (inc.getCentro() != null && inc.getCentro() == 1) {
             logTF.info(msg);
         } else if (inc.getCentro() != null && inc.getCentro() == 2) {

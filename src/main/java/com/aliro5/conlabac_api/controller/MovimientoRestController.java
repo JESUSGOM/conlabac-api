@@ -9,26 +9,25 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api") // Ruta base simplificada para coincidir con el Frontend
+@RequestMapping("/api")
 @CrossOrigin(origins = "*")
 public class MovimientoRestController {
 
     @Autowired
     private MovimientoService servicio;
 
-    // Ruta: GET http://localhost:8080/api/movimientos
     @GetMapping("/movimientos")
     public ResponseEntity<List<Movimiento>> listar() {
         return ResponseEntity.ok(servicio.listarTodos());
     }
 
-    // Ruta: POST http://localhost:8080/api/movimientos
     @PostMapping("/movimientos")
     public ResponseEntity<Movimiento> guardar(@RequestBody Movimiento movimiento) {
+        // Log para depuración
+        System.out.println("API: Recibida petición para guardar movimiento de: " + movimiento.getNombre());
         return ResponseEntity.ok(servicio.guardar(movimiento));
     }
 
-    // Ruta: GET http://localhost:8080/api/movimientos/{id}
     @GetMapping("/movimientos/{id}")
     public ResponseEntity<Movimiento> obtener(@PathVariable Integer id) {
         return servicio.obtenerPorId(id)
@@ -36,10 +35,6 @@ public class MovimientoRestController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    /**
-     * CRÍTICO: Esta es la ruta que tu Web está buscando.
-     * URL: http://localhost:8080/api/activos?centro=X
-     */
     @GetMapping("/activos")
     public ResponseEntity<List<Movimiento>> listarActivosHoy(@RequestParam("centro") Integer idCentro) {
         System.out.println("API: Buscando visitantes activos para centro: " + idCentro);
@@ -47,13 +42,13 @@ public class MovimientoRestController {
         return ResponseEntity.ok(activos != null ? activos : List.of());
     }
 
-    // Ruta: PUT http://localhost:8080/api/movimientos/{id}/salida
     @PutMapping("/movimientos/{id}/salida")
     public ResponseEntity<Void> registrarSalida(@PathVariable Integer id) {
         try {
             servicio.registrarSalida(id);
             return ResponseEntity.ok().build();
         } catch (Exception e) {
+            System.err.println("API ERROR: Fallo al registrar salida ID " + id + ": " + e.getMessage());
             return ResponseEntity.internalServerError().build();
         }
     }

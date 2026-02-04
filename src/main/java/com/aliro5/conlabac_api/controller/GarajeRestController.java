@@ -14,22 +14,46 @@ public class GarajeRestController {
     @Autowired
     private GarajeService service;
 
+    /**
+     * Devuelve la lista de vehículos que están actualmente en el garaje
+     * (aquellos que no tienen fecha de salida).
+     */
     @GetMapping
     public List<Garaje> listar() {
-        // En el log se veía que buscabas listar por centro,
-        // si tu service tiene listarPorCentro(id), deberías usarlo aquí.
-        return service.listarTodos();
+        // Usamos el nuevo método del service que filtra los activos
+        return service.listarActivos();
     }
 
+    /**
+     * Registra la entrada de un nuevo vehículo.
+     */
     @PostMapping
     public Garaje guardar(@RequestBody Garaje registro) {
         return service.guardar(registro);
     }
 
+    /**
+     * Obtiene los detalles de un registro específico por su ID.
+     */
     @GetMapping("/{id}")
     public ResponseEntity<Garaje> obtener(@PathVariable Integer id) {
         return service.obtenerPorId(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    /**
+     * NUEVO MÉTODO: Registra la salida de un vehículo.
+     * Se invoca desde la web al pulsar el botón "Salida".
+     */
+    @PutMapping("/salida/{id}")
+    public ResponseEntity<Void> registrarSalida(@PathVariable Integer id) {
+        try {
+            service.registrarSalida(id);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            System.err.println("Error al registrar salida en API: " + e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        }
     }
 }

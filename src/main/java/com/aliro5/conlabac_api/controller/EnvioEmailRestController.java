@@ -18,7 +18,6 @@ public class EnvioEmailRestController {
     @Autowired
     private EnvioEmailService service;
 
-    // MODIFICADO: Ahora requiere centroId
     @GetMapping("/paginado")
     public Page<EnvioEmail> listarPaginado(
             @RequestParam Integer centroId,
@@ -32,13 +31,11 @@ public class EnvioEmailRestController {
         return service.listarTodo();
     }
 
-    @GetMapping("/destinatario/{email}")
-    public List<EnvioEmail> buscarPorDestinatario(@PathVariable String email) {
-        return service.listarPorDestinatario(email);
-    }
-
     @PostMapping("/enviar")
     public ResponseEntity<?> enviarNuevoEmail(@RequestBody EmailRequestDTO request) {
+        if (request.getIdCentro() == null) {
+            return ResponseEntity.badRequest().body("{\"error\": \"El ID de centro es obligatorio\"}");
+        }
         try {
             service.enviarEmailLibre(request);
             return ResponseEntity.ok("{\"mensaje\": \"Email enviado correctamente.\"}");

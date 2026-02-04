@@ -1,6 +1,5 @@
 package com.aliro5.conlabac_api.repository;
 
-
 import com.aliro5.conlabac_api.model.Movimiento;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -13,6 +12,7 @@ import java.util.List;
 
 @Repository
 public interface MovimientoRepository extends JpaRepository<Movimiento, Integer> {
+
     // Buscar movimientos por ID de centro (útil para filtros)
     List<Movimiento> findByIdCentro(Integer idCentro);
 
@@ -28,7 +28,6 @@ public interface MovimientoRepository extends JpaRepository<Movimiento, Integer>
     Integer contarVisitasMes(Integer idCentro, int mes, int anio);
 
     // ESTADÍSTICA: Agrupa por destino y cuenta
-    // Devolvemos una lista de Arrays de Objetos [Destino, Cantidad]
     @Query(value = "SELECT MovDestino, COUNT(*) as total FROM Movadoj " +
             "WHERE MovCentro = :idCentro AND MONTH(MovFechaHoraEntrada_dt) = :mes AND YEAR(MovFechaHoraEntrada_dt) = :anio " +
             "GROUP BY MovDestino ORDER BY total DESC", nativeQuery = true)
@@ -36,6 +35,9 @@ public interface MovimientoRepository extends JpaRepository<Movimiento, Integer>
 
     // --- SCRIPTS DE MANTENIMIENTO (SQL Nativo) ---
 
+    /**
+     * MANTENIMIENTO A: De Texto antiguo a DateTime moderno (Entrada)
+     */
     @Modifying
     @Transactional
     @Query(value = "UPDATE Movadoj " +
@@ -47,8 +49,11 @@ public interface MovimientoRepository extends JpaRepository<Movimiento, Integer>
             "  AND MovHoraEntrada IS NOT NULL " +
             "  AND MovHoraEntrada <> '' " +
             "  AND MovHoraEntrada <> 'NULL'", nativeQuery = true)
-    void corregirFechasEntrada();
+    int corregirFechasEntrada();
 
+    /**
+     * MANTENIMIENTO B: De Texto antiguo a DateTime moderno (Salida)
+     */
     @Modifying
     @Transactional
     @Query(value = "UPDATE Movadoj " +
@@ -60,5 +65,31 @@ public interface MovimientoRepository extends JpaRepository<Movimiento, Integer>
             "  AND MovHoraSalida IS NOT NULL " +
             "  AND MovHoraSalida <> '' " +
             "  AND MovHoraSalida <> 'NULL'", nativeQuery = true)
-    void corregirFechasSalida();
+    int corregirFechasSalida();
+
+    /**
+     * MANTENIMIENTO C: De DateTime moderno a Texto antiguo (Entrada)
+     * Rellena MovFechaEntrada (YYYYMMDD) y MovHoraEntrada (HHMMSS) si están vacíos
+     */
+    @Modifying
+    @Transactional
+    @Query(value = "UPDATE Movadoj SET " +
+            "MovFechaEntrada = DATE_FORMAT(MovFechaHoraEntrada_dt, '%Y%m%d'), " +
+            "MovHoraEntrada = DATE_FORMAT(MovFechaHoraEntrada_dt, '%H%i%s') " +
+            "WHERE MovFechaHoraEntrada_dt IS NOT NULL " +
+            "AND (MovFechaEntrada IS NULL OR MovFechaEntrada = '' OR MovFechaEntrada = 'NULL')", nativeQuery = true)
+    int corregirTextosDesdeDateTimeEntrada();
+
+    /**
+     * MANTENIMIENTO D: De DateTime moderno a Texto antiguo (Salida)
+     * Rellena MovFechaSalida (YYYYMMDD) y MovHoraSalida (HHMMSS) si están vacíos
+     */
+    @Modifying
+    @Transactional
+    @Query(value = "UPDATE Movadoj SET " +
+            "MovFechaSalida = DATE_FORMAT(MovFechaHoraSalida_dt, '%Y%m%d'), " +
+            "MovHoraSalida = DATE_FORMAT(MovFechaHoraSalida_dt, '%H%i%s') " +
+            "WHERE MovFechaHoraSalida_dt IS NOT NULL " +
+            "AND (MovFechaSalida IS NULL OR MovFechaSalida = '' OR MovFechaSalida = 'NULL')", nativeQuery = true)
+    int corregirTextosDesdeDateTimeSalida();
 }

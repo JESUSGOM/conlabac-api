@@ -40,7 +40,7 @@ public class EmailService {
         if (inc.getIdCentro() == 1) { // Tenerife
             centroNombre = "Tenerife";
             remitenteUser = "conserjeriaitc.tf@grupoenvera.org";
-            remitentePass = "envera2026"; // <--- Cambia aquí si es distinta
+            remitentePass = "Envera.2026"; // <--- Cambia aquí si es distinta
             nombreExposicion = "Conserjería ITC Tenerife";
             destinatarioPrincipal = "cbetancor@itccanarias.org";
             asunto = "Nueva Incidencia - ITC Tenerife";
@@ -49,7 +49,7 @@ public class EmailService {
         else if (inc.getIdCentro() == 2) { // Las Palmas
             centroNombre = "Las Palmas";
             remitenteUser = "conserjeriaitc.gc@grupoenvera.org";
-            remitentePass = "Envera2026"; // <--- Cambia aquí si es distinta
+            remitentePass = "Envera.2026"; // <--- Cambia aquí si es distinta
             nombreExposicion = "Conserjería ITC Las Palmas";
             destinatarioPrincipal = "dgi_cebrian@itccanarias.org";
             asunto = "Nueva Incidencia - ITC Las Palmas";

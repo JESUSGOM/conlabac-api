@@ -10,7 +10,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -33,7 +33,8 @@ class GarajeServiceTest {
         vehiculo = new Garaje();
         vehiculo.setId(1);
         vehiculo.setMatricula("1234BBB");
-        vehiculo.setFecha(LocalDate.now());
+        // CORRECCIÓN: Usamos fechaEntrada y LocalDateTime
+        vehiculo.setFechaEntrada(LocalDateTime.now());
     }
 
     @Test
@@ -41,11 +42,16 @@ class GarajeServiceTest {
     void testGuardarLimpiaMatricula() {
         Garaje nuevo = new Garaje();
         nuevo.setMatricula(" 5678 ccc ");
+
+        // Simulamos el guardado devolviendo el mismo objeto
         when(repo.save(any(Garaje.class))).thenAnswer(i -> i.getArguments()[0]);
 
         Garaje guardado = service.guardar(nuevo);
 
+        // Verificamos que la matrícula se haya limpiado correctamente
         assertEquals("5678CCC", guardado.getMatricula());
+        // Verificamos que se haya generado la fecha de entrada
+        assertNotNull(guardado.getFechaEntrada());
         assertNotNull(guardado.getFechaTexto());
     }
 
@@ -54,10 +60,22 @@ class GarajeServiceTest {
     void testObtenerPorId() {
         when(repo.findById(1)).thenReturn(Optional.of(vehiculo));
 
-        // Corrección del error de Optional:
-        Garaje encontrado = service.obtenerPorId(1).orElse(null);
+        Optional<Garaje> encontradoOpt = service.obtenerPorId(1);
 
-        assertNotNull(encontrado);
-        assertEquals("1234BBB", encontrado.getMatricula());
+        assertTrue(encontradoOpt.isPresent());
+        assertEquals("1234BBB", encontradoOpt.get().getMatricula());
+    }
+
+    @Test
+    @DisplayName("Debe registrar la fecha de salida al ejecutar registrarSalida")
+    void testRegistrarSalida() {
+        when(repo.findById(1)).thenReturn(Optional.of(vehiculo));
+        when(repo.save(any(Garaje.class))).thenAnswer(i -> i.getArguments()[0]);
+
+        service.registrarSalida(1);
+
+        // Verificamos que ahora el vehículo tenga fecha de salida
+        assertNotNull(vehiculo.getFechaSalida());
+        verify(repo, times(1)).save(vehiculo);
     }
 }

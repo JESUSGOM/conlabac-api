@@ -9,25 +9,33 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/aperturas-extra") // Corregido para coincidir con los tests/logs
+@RequestMapping("/api/aperturas-extra") // Ruta unificada para evitar 404/500
 public class AperturaExtraRestController {
 
     @Autowired
     private AperturaExtraService service;
 
-    // GET /api/aperturas-extra?centroId=1
+    /**
+     * GET http://localhost:8080/api/aperturas-extra?centroId=1
+     */
     @GetMapping
     public List<AperturaExtra> listar(@RequestParam("centroId") Integer centroId) {
         return service.listarPorCentro(centroId);
     }
 
-    // POST /api/aperturas-extra
+    /**
+     * POST http://localhost:8080/api/aperturas-extra
+     * El @RequestBody convierte el JSON de la WEB en un objeto Java
+     */
     @PostMapping
     public AperturaExtra guardar(@RequestBody AperturaExtra ae) {
+        System.out.println(">>> API: Recibida solicitud para guardar apertura extra.");
         return service.guardar(ae);
     }
 
-    // DELETE /api/aperturas-extra/{id}
+    /**
+     * DELETE http://localhost:8080/api/aperturas-extra/{id}
+     */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminar(@PathVariable Integer id) {
         service.eliminar(id);

@@ -12,12 +12,23 @@ import java.util.List;
 @Repository
 public interface GarajeRepository extends JpaRepository<Garaje, Integer> {
 
-    // Listar ordenado por fecha (de más reciente a más antigua)
-    List<Garaje> findAllByOrderByFechaDesc();
+    /**
+     * Devuelve solo los vehículos que están actualmente en el garaje.
+     * (Aquellos cuya fecha de salida es NULL)
+     */
+    List<Garaje> findByFechaSalidaIsNullOrderByFechaEntradaDesc();
+
+    /**
+     * Listar todos los registros (histórico completo).
+     */
+    List<Garaje> findAllByOrderByFechaEntradaDesc();
 
     // --- MANTENIMIENTO AUTOMÁTICO DE FECHAS ---
-    // Convierte el varchar '20250101' a una fecha real en la columna _dt
-    // Usamos UPDATE IGNORE para saltar datos corruptos si los hubiera
+
+    /**
+     * Sincroniza la columna de texto antigua 'GrjFecha' con la nueva columna DATETIME 'GrjFecha_dt'.
+     * Esto es vital para que los registros antiguos de tu sistema PHP aparezcan en la nueva web.
+     */
     @Modifying
     @Transactional
     @Query(value = "UPDATE IGNORE Garaje " +
@@ -25,6 +36,7 @@ public interface GarajeRepository extends JpaRepository<Garaje, Integer> {
             "WHERE GrjFecha_dt IS NULL " +
             "  AND GrjFecha IS NOT NULL " +
             "  AND GrjFecha <> '' " +
-            "  AND GrjFecha <> 'NULL'", nativeQuery = true)
+            "  AND GrjFecha <> 'NULL' " +
+            "  AND LENGTH(GrjFecha) = 8", nativeQuery = true)
     void corregirFechas();
 }

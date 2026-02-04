@@ -9,33 +9,32 @@ import jakarta.mail.internet.MimeMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.mail.javamail.JavaMailSenderImpl;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Properties;
 
 @Service
 public class EnvioEmailService {
 
+    private static final Logger log = LoggerFactory.getLogger(EnvioEmailService.class);
+
     @Autowired private EnvioEmailRepository emailRepo;
     @Autowired private IncidenciaRepository incidenciaRepo;
 
-    // Loggers para discriminación de sedes en el archivo de logs
-    private static final Logger logTF = LoggerFactory.getLogger("TenerifeLogger");
-    private static final Logger logGC = LoggerFactory.getLogger("GranCanariaLogger");
+    @Autowired @Qualifier("mailSenderTenerife") private JavaMailSender mailSenderTF;
+    @Autowired @Qualifier("mailSenderGranCanaria") private JavaMailSender mailSenderGC;
 
-    // Método para la vista paginada (usado en las tablas principales)
     public Page<EnvioEmail> listarPaginado(Integer centroId, Pageable pageable) {
         return emailRepo.findByCentroPaginado(centroId, pageable);
     }
-
-    // --- CORRECCIÓN: Métodos restaurados para que EnvioEmailRestController compile ---
 
     public List<EnvioEmail> listarTodo() {
         return emailRepo.findAll();
@@ -45,93 +44,99 @@ public class EnvioEmailService {
         return emailRepo.findByDestinatarioOrderByFechaHoraDtDesc(email);
     }
 
-    // --------------------------------------------------------------------------------
-
+    @Transactional
     public void enviarEmailLibre(EmailRequestDTO dto) throws Exception {
-        JavaMailSenderImpl mailSender = configurarMailSender(dto.getIdCentro());
-        enviarMimeMessage(mailSender, dto.getDestinatario(), null, dto.getAsunto(), dto.getMensaje(), dto.getIdCentro());
-        registrarEnEnvioEmail(dto, dto.getDestinatario());
+        JavaMailSender sender = (dto.getIdCentro() == 1) ? mailSenderTF : mailSenderGC;
+        String from = (dto.getIdCentro() == 1) ? "conserjeriaitc.tf@grupoenvera.org" : "conserjeriaitc.gc@grupoenvera.org";
 
-        String msg = "EMAIL LIBRE enviado a " + dto.getDestinatario() + " - Asunto: " + dto.getAsunto();
-        if (dto.getIdCentro() == 1) logTF.info(msg);
-        else logGC.info(msg);
+        try {
+            ejecutarEnvio(sender, from, dto.getDestinatario(), dto.getAsunto(), dto.getMensaje(), dto.getIdCentro());
+            registrarLogEmail(dto, dto.getDestinatario());
+            log.info(">>> EMAIL LIBRE enviado con éxito desde {}", from);
+        } catch (Exception e) {
+            log.error(">>> ERROR enviando email libre: {}", e.getMessage());
+            throw e;
+        }
     }
 
+    @Transactional
     public void enviarYRegistrarIncidencia(EmailRequestDTO dto) throws Exception {
-        String toEmail, toNombre, asunto, pass, from;
+        JavaMailSender sender;
+        String from, to, asunto, toNombre;
+
         if (dto.getIdCentro() == 1) {
-            from = "conserjeriaitc.tf@grupoenvera.org"; pass = "envara.2026";
-            toEmail = "cbetancor@itccanarias.org"; toNombre = "María Carmen Betancor Reula";
-            asunto = "Comunicación de Incidencia desde Tenerife.";
+            sender = mailSenderTF;
+            from = "conserjeriaitc.tf@grupoenvera.org";
+            to = "cbetancor@itccanarias.org";
+            toNombre = "María Carmen Betancor Reula";
+            asunto = "Comunicación de Incidencia - Tenerife";
         } else {
-            from = "conserjeriaitc.gc@grupoenvera.org"; pass = "Envera2026";
-            toEmail = "dgi_cebrian@itccanarias.org"; toNombre = "Gestión de Infraestructuras Cebrián";
-            asunto = "Comunicación de Incidencia desde Las Palmas.";
+            sender = mailSenderGC;
+            from = "conserjeriaitc.gc@grupoenvera.org";
+            to = "dgi_cebrian@itccanarias.org";
+            toNombre = "Gestión de Infraestructuras Cebrián";
+            asunto = "Comunicación de Incidencia - Las Palmas";
         }
 
-        JavaMailSenderImpl mailSender = configurarMailSender(dto.getIdCentro());
-        mailSender.setUsername(from); mailSender.setPassword(pass);
-        enviarMimeMessage(mailSender, toEmail, toNombre, asunto, dto.getMensaje(), dto.getIdCentro());
+        try {
+            ejecutarEnvio(sender, from, to, asunto, dto.getMensaje(), dto.getIdCentro());
 
-        // Guardar la incidencia en la base de datos
-        Incidencia inc = new Incidencia();
-        inc.setCentro(dto.getIdCentro());
-        inc.setFecha(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd")));
-        inc.setHora(LocalDateTime.now().format(DateTimeFormatter.ofPattern("HHmmss")));
-        inc.setTexto(dto.getMensaje());
-        inc.setComunicadoA(toNombre);
-        inc.setEmailComunica(toEmail);
-        inc.setUsuario(dto.getDniEmisor());
-        inc.setFechaHoraDt(LocalDateTime.now());
-        incidenciaRepo.save(inc);
+            Incidencia inc = new Incidencia();
+            inc.setCentro(dto.getIdCentro());
+            inc.setFecha(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd")));
+            inc.setHora(LocalDateTime.now().format(DateTimeFormatter.ofPattern("HHmmss")));
+            inc.setTexto(dto.getMensaje());
+            inc.setComunicadoA(toNombre);
+            inc.setEmailComunica(to);
 
-        registrarEnEnvioEmail(dto, toEmail);
+            String emisor = dto.getDniEmisor();
+            if (emisor != null && emisor.length() > 45) emisor = emisor.substring(0, 45);
+            inc.setUsuario(emisor);
 
-        // Registro en el LOG físico de la sede
-        String logMsg = "EMAIL INCIDENCIA enviado a " + toEmail + " por " + dto.getDniEmisor();
-        if (dto.getIdCentro() == 1) logTF.info(logMsg);
-        else logGC.info(logMsg);
-    }
+            inc.setFechaHoraDt(LocalDateTime.now());
+            incidenciaRepo.save(inc);
 
-    private JavaMailSenderImpl configurarMailSender(Integer idCentro) {
-        JavaMailSenderImpl ms = new JavaMailSenderImpl();
-        ms.setHost("smtp.office365.com"); ms.setPort(587);
-        if (idCentro == 1) {
-            ms.setUsername("conserjeriaitc.tf@grupoenvera.org");
-            ms.setPassword("envara.2026");
-        } else {
-            ms.setUsername("conserjeriaitc.gc@grupoenvera.org");
-            ms.setPassword("Envera2026");
+            registrarLogEmail(dto, to);
+        } catch (Exception e) {
+            log.error(">>> ERROR en incidencia: {}", e.getMessage());
+            throw e;
         }
-        configurarProperties(ms);
-        return ms;
     }
 
-    private void enviarMimeMessage(JavaMailSenderImpl ms, String to, String name, String sub, String msg, Integer centro) throws Exception {
-        MimeMessage mime = ms.createMimeMessage();
+    private void ejecutarEnvio(JavaMailSender sender, String from, String to, String sub, String msg, Integer centro) throws Exception {
+        MimeMessage mime = sender.createMimeMessage();
         MimeMessageHelper h = new MimeMessageHelper(mime, "UTF-8");
-        h.setFrom(ms.getUsername()); h.setTo(to); h.setSubject(sub); h.setText(msg);
-        if (centro == 1) h.addCc("gloria.santana@grupoenvera.org");
-        else h.addCc("josea.henriquez@grupoenvera.org");
+        h.setFrom(from);
+        h.setTo(to);
+        h.setSubject(sub);
+        h.setText(msg, true);
+
+        // REPLICACIÓN EXACTA DE remisiva.php
+        if (centro == 1) {
+            h.addCc("adelaida.gomez@grupoenvera.org");
+        } else {
+            h.addCc("josea.henriquez@grupoenvera.org");
+            h.addCc("conserjeriaitc.gc@grupoenvera.org");
+        }
+
+        // Copia oculta (BCC) que tenías en PHP
         h.addBcc("informaticaitc@jfgb.es");
-        ms.send(mime);
+
+        sender.send(mime);
     }
 
-    private void configurarProperties(JavaMailSenderImpl ms) {
-        Properties p = ms.getJavaMailProperties();
-        p.put("mail.smtp.auth", "true");
-        p.put("mail.smtp.starttls.enable", "true");
-        p.put("mail.smtp.starttls.required", "true");
-    }
-
-    private void registrarEnEnvioEmail(EmailRequestDTO dto, String dest) {
-        EnvioEmail log = new EnvioEmail();
-        log.setDestinatario(dest);
-        log.setFecha(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd")));
-        log.setHora(LocalDateTime.now().format(DateTimeFormatter.ofPattern("HHmmss")));
-        log.setTexto(dto.getMensaje());
-        log.setEmisor(dto.getDniEmisor());
-        log.setFechaHoraDt(LocalDateTime.now());
-        emailRepo.save(log);
+    private void registrarLogEmail(EmailRequestDTO dto, String dest) {
+        EnvioEmail logEntidad = new EnvioEmail();
+        logEntidad.setDestinatario(dest);
+        logEntidad.setFecha(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd")));
+        logEntidad.setHora(LocalDateTime.now().format(DateTimeFormatter.ofPattern("HHmmss")));
+        String texto = dto.getMensaje();
+        if (texto != null && texto.length() > 1000) texto = texto.substring(0, 1000);
+        logEntidad.setTexto(texto);
+        String emisor = dto.getDniEmisor();
+        if (emisor != null && emisor.length() > 45) emisor = emisor.substring(0, 45);
+        logEntidad.setEmisor(emisor);
+        logEntidad.setFechaHoraDt(LocalDateTime.now());
+        emailRepo.save(logEntidad);
     }
 }

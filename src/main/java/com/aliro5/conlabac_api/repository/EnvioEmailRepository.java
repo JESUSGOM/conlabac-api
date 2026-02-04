@@ -16,24 +16,35 @@ public interface EnvioEmailRepository extends JpaRepository<EnvioEmail, Integer>
 
     /**
      * Filtra los emails por el centro al que pertenece el emisor.
-     * CORRECCIÓN: Se usa 'u.dni' y 'u.idCentro' para coincidir exactamente con los
-     * atributos definidos en la clase Usuario.java.
+     * Esta consulta permite que en el panel web cada centro vea solo su historial.
      */
-    @Query("SELECT e FROM EnvioEmail e WHERE e.emisor IN (SELECT u.dni FROM Usuario u WHERE u.idCentro = :centroId) ORDER BY e.fechaHoraDt DESC")
+    @Query("SELECT e FROM EnvioEmail e WHERE e.emisor IN " +
+            "(SELECT u.dni FROM Usuario u WHERE u.idCentro = :centroId) " +
+            "ORDER BY e.fechaHoraDt DESC")
     Page<EnvioEmail> findByCentroPaginado(@Param("centroId") Integer centroId, Pageable pageable);
 
+    /**
+     * Listado general ordenado por fecha descendente.
+     */
     Page<EnvioEmail> findAllByOrderByFechaHoraDtDesc(Pageable pageable);
 
+    /**
+     * Busca envíos realizados a un destinatario específico.
+     */
     List<EnvioEmail> findByDestinatarioOrderByFechaHoraDtDesc(String destinatario);
 
     /**
-     * Mantenimiento: Sincroniza el campo datetime uniendo Fecha y Hora.
-     * Al ser nativeQuery = true, aquí se usan los nombres de las COLUMNAS reales de la tabla SQL.
+     * Mantenimiento automático:
+     * Une las columnas de texto EnEmFecha y EnEmHora en el campo LocalDateTime EnEmFechaHora_dt.
+     * Se usa Native Query para aprovechar la función STR_TO_DATE de MySQL/MariaDB.
      */
     @Modifying
     @Transactional
     @Query(value = "UPDATE EnvioEmail SET EnEmFechaHora_dt = STR_TO_DATE(CONCAT(EnEmFecha, EnEmHora), '%Y%m%d%H%i%s') " +
-            "WHERE EnEmFechaHora_dt IS NULL AND LENGTH(EnEmFecha) = 8 AND LENGTH(EnEmHora) = 6",
+            "WHERE (EnEmFechaHora_dt IS NULL OR EnEmFechaHora_dt = '') " +
+            "AND EnEmFecha IS NOT NULL AND EnEmFecha <> '' AND EnEmFecha <> 'NULL' " +
+            "AND EnEmHora IS NOT NULL AND EnEmHora <> '' AND EnEmHora <> 'NULL' " +
+            "AND LENGTH(EnEmFecha) = 8 AND LENGTH(EnEmHora) = 6",
             nativeQuery = true)
     int actualizarFechasNulasEmails();
 }

@@ -2,6 +2,7 @@ package com.aliro5.conlabac_api.service;
 
 import jakarta.mail.internet.MimeMessage;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.io.FileSystemResource;
@@ -15,17 +16,18 @@ import java.io.File;
 public class LogSenderService {
 
     @Autowired
+    @Qualifier("mailSenderTenerife")
     private JavaMailSender mailSender;
 
     /**
      * Se ejecuta automáticamente al arrancar la aplicación.
-     * Esperamos 10 segundos para asegurar que el sistema de logs haya inicializado los archivos.
+     * Pausa de 15 segundos para dar tiempo a que los ficheros de log se generen físicamente en W:
      */
     @EventListener(ApplicationReadyEvent.class)
     public void enviarLogsAlArranque() {
-        System.out.println(">>> [LOG-SENDER] Detectado arranque. Iniciando pausa de 10s para auto-envío...");
+        System.out.println(">>> [LOG-SENDER] Detectado arranque. Iniciando pausa de 15s para reporte inicial...");
         try {
-            Thread.sleep(10000);
+            Thread.sleep(15000);
             enviarLogsSedes();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -37,46 +39,47 @@ public class LogSenderService {
      */
     @Scheduled(cron = "0 55 23 * * *")
     public void enviarLogsSedes() {
-        System.out.println(">>> [LOG-SENDER] Iniciando proceso de envío a jesusfgomezb@gmail.com...");
+        System.out.println(">>> [LOG-SENDER] Generando reporte de actividad para jesusfgomezb@gmail.com...");
         enviarLogPorSede("Tenerife", "tenerife-api.log");
         enviarLogPorSede("Gran Canaria", "grancanaria-api.log");
+        // También podemos enviar el log general de la API que configuramos en application.properties
+        enviarLogPorSede("General", "api-general.log");
     }
 
     private void enviarLogPorSede(String sede, String nombreArchivo) {
-        // Buscamos el archivo en la carpeta de logs relativa al ejecutable
-        File logFile = new File("./logs/" + nombreArchivo);
+        // RUTA ABSOLUTA unificada con application.properties
+        File logFile = new File("W:/PROYECTOS/Aliro5/logs/" + nombreArchivo);
 
-        if (!logFile.exists()) {
-            System.out.println(">>> [LOG-SENDER] INFO: El archivo " + nombreArchivo + " no existe aún. Se saltará este envío.");
-            return;
-        }
-
-        if (logFile.length() == 0) {
-            System.out.println(">>> [LOG-SENDER] INFO: El archivo " + nombreArchivo + " está vacío. No hay actividad que enviar.");
+        if (!logFile.exists() || logFile.length() == 0) {
+            // No imprimimos error para no ensuciar la consola si el archivo aún no tiene datos
             return;
         }
 
         try {
             MimeMessage message = mailSender.createMimeMessage();
-            // true para permitir adjuntos, UTF-8 para tildes y caracteres especiales
+            // true indica que es un mensaje multipart (con adjuntos)
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            // CONFIGURACIÓN DE AUTO-ENVÍO (Gmail requiere que From y To sean iguales si usas tu propia cuenta)
-            helper.setFrom("jesusfgomezb@gmail.com");
-            helper.setTo("jesusfgomezb@gmail.com");
-            helper.setSubject("AUTO-LOG ALIROS - Sede: " + sede);
-            helper.setText("Reporte automático de actividad detectado en el archivo de logs de " + sede + ".");
+            // REMITENTE: Debe ser la cuenta autenticada de Tenerife
+            helper.setFrom("conserjeriaitc.tf@grupoenvera.org");
 
+            // DESTINATARIO: Tu cuenta de Gmail
+            helper.setTo("jesusfgomezb@gmail.com");
+
+            helper.setSubject("REPORTE ALIROS - Sede: " + sede);
+            helper.setText("Se adjunta el reporte de actividad generado automáticamente para " + sede + ".");
+
+            // Cargamos el recurso desde la unidad W:
             FileSystemResource file = new FileSystemResource(logFile);
-            // Adjuntamos como .txt para evitar que Gmail lo bloquee por seguridad
-            helper.addAttachment("log-" + sede.toLowerCase().replace(" ", "") + ".txt", file);
+
+            // Adjuntamos con extensión .txt para que Gmail no lo bloquee
+            helper.addAttachment(nombreArchivo + ".txt", file);
 
             mailSender.send(message);
-            System.out.println(">>> [LOG-SENDER] ¡AUTO-ENVÍO EXITOSO! Revisar bandeja de entrada para: " + sede);
+            System.out.println(">>> [LOG-SENDER] Reporte enviado con éxito: " + sede);
 
         } catch (Exception e) {
-            System.err.println(">>> [LOG-SENDER] ERROR CRÍTICO: No se pudo realizar el auto-envío. Motivo: " + e.getMessage());
-            // Si el error persiste como 'Authentication failed', revisa la contraseña de aplicación de Google.
+            System.err.println(">>> [LOG-SENDER] Error al enviar log de " + sede + ": " + e.getMessage());
         }
     }
 }

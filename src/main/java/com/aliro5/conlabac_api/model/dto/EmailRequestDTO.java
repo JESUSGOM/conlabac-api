@@ -4,7 +4,8 @@ import java.io.Serializable;
 
 /**
  * Data Transfer Object (DTO) para la solicitud de envío de emails.
- * Se utiliza para transferir los datos del formulario WEB hacia la API.
+ * Transporta los datos desde conlabac-web hacia conlabac-api para procesar
+ * envíos dinámicos según el centro (Tenerife o Gran Canaria).
  */
 public class EmailRequestDTO implements Serializable {
 
@@ -16,15 +17,15 @@ public class EmailRequestDTO implements Serializable {
     private Integer idCentro;
     private String dniEmisor;
 
-    // --- Constructor Vacío (Obligatorio para la deserialización JSON) ---
+    // --- Constructor Vacío (Obligatorio para JSON) ---
     public EmailRequestDTO() {
     }
 
-    // --- Constructor con todos los campos (Útil para pruebas o instanciación rápida) ---
+    // --- Constructor Completo ---
     public EmailRequestDTO(String destinatario, String asunto, String mensaje, Integer idCentro, String dniEmisor) {
         this.destinatario = destinatario;
         this.asunto = asunto;
-        this.mensaje = mensaje;
+        this.setMensaje(mensaje); // Usamos el setter para aplicar el control de longitud
         this.idCentro = idCentro;
         this.dniEmisor = dniEmisor;
     }
@@ -51,8 +52,16 @@ public class EmailRequestDTO implements Serializable {
         return mensaje;
     }
 
+    /**
+     * Setea el mensaje limitándolo a una longitud segura para la columna EnEmTexto
+     * de la tabla EnvioEmail, evitando errores de "Data truncation".
+     */
     public void setMensaje(String mensaje) {
-        this.mensaje = mensaje;
+        if (mensaje != null && mensaje.length() > 2000) {
+            this.mensaje = mensaje.substring(0, 2000);
+        } else {
+            this.mensaje = mensaje;
+        }
     }
 
     public Integer getIdCentro() {
@@ -71,7 +80,6 @@ public class EmailRequestDTO implements Serializable {
         this.dniEmisor = dniEmisor;
     }
 
-    // Método toString para depuración (opcional pero recomendado)
     @Override
     public String toString() {
         return "EmailRequestDTO{" +
